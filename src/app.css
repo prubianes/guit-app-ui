@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --bg: #f5f0e8;
+  --surface: rgba(255, 252, 247, 0.9);
+  --surface-strong: #fffdf9;
+  --text: #181613;
+  --muted: #72685d;
+  --line: rgba(24, 22, 19, 0.12);
+  --accent: #a45a32;
+  --success: #5c7c5b;
+  --danger: #ad5252;
+  --shadow: 0 20px 60px rgba(51, 36, 24, 0.08);
+}
+
+body[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111111;
+  --surface: rgba(23, 23, 23, 0.82);
+  --surface-strong: #161616;
+  --text: #f6f0ea;
+  --muted: #ab9f92;
+  --line: rgba(246, 240, 234, 0.1);
+  --accent: #f1a273;
+  --success: #97cf95;
+  --danger: #ff9898;
+  --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  font-family: "Helvetica Neue", "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(164, 90, 50, 0.12), transparent 25%),
+    radial-gradient(circle at bottom right, rgba(92, 124, 91, 0.14), transparent 25%),
+    var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Palatino Linotype", "Book Antiqua", serif;
+}
+
+button,
+input,
+select,
+textarea {
+  @apply outline-none;
+}
+
+/* Tailwind class remap to minimal style tokens */
+.bg-slate-50 {
+  background-color: var(--bg) !important;
+}
+
+.bg-white {
+  background-color: var(--surface) !important;
+  backdrop-filter: blur(14px);
+}
+
+.border-slate-200,
+.border-slate-300,
+.divide-slate-100,
+.divide-slate-200 {
+  border-color: var(--line) !important;
+}
+
+.text-slate-900 {
+  color: var(--text) !important;
+}
+
+.text-slate-800,
+.text-slate-700,
+.text-slate-600,
+.text-slate-500 {
+  color: var(--muted) !important;
+}
+
+.hover\:bg-slate-50:hover,
+.hover\:bg-slate-100:hover,
+.hover\:bg-slate-200:hover {
+  background-color: var(--surface-strong) !important;
+}
