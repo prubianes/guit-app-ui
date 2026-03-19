@@ -49,16 +49,14 @@
           <FormField
             label="First name"
             name="firstName"
-            placeholder="Pablo"
+            placeholder="Your first name"
             error={fieldErrors.firstName}
-            required
           />
           <FormField
             label="Last name"
             name="lastName"
-            placeholder="Rubianes"
+            placeholder="Your last name"
             error={fieldErrors.lastName}
-            required
           />
         </div>
         <FormField

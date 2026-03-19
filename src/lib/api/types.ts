@@ -51,12 +51,13 @@ export type Category = {
 
 export type Transaction = {
   id: string;
-  accountId: string;
-  categoryId: string;
+  accountId: string | number;
+  categoryId: string | number;
   amount: number;
   type: "income" | "expense";
   description?: string;
-  occurredAt: string;
+  occurredAt?: string;
+  date?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -91,12 +92,13 @@ export type CreateCategoryInput = {
 export type UpdateCategoryInput = CreateCategoryInput;
 
 export type CreateTransactionInput = {
-  accountId: string;
-  categoryId: string;
+  accountId: string | number;
+  categoryId: string | number;
   amount: number;
   type: "income" | "expense";
   description?: string;
-  occurredAt: string;
+  occurredAt?: string;
+  date?: string;
 };
 
 export type UpdateTransactionInput = Partial<CreateTransactionInput>;

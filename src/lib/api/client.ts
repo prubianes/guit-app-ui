@@ -75,18 +75,15 @@ export class ServerApiClient {
       }
     });
 
-    const payload = await this.parseJson<AuthResult | { accessToken: string; refreshToken?: string }>(
-      response
-    );
+    const payload = await this.parseJson<Record<string, unknown>>(response);
 
     if (!response.ok || "error" in payload) {
       clearAuthCookies(this.event.cookies);
       return false;
     }
 
-    const data = payload.data;
-    const accessToken = "accessToken" in data ? data.accessToken : "";
-    const nextRefresh = "refreshToken" in data ? data.refreshToken : undefined;
+    const data = payload.data as Record<string, unknown>;
+    const { accessToken, refreshToken: nextRefresh } = extractTokenPair(data);
 
     if (!accessToken) {
       clearAuthCookies(this.event.cookies);
@@ -134,8 +131,27 @@ export class ServerApiClient {
 
     if (!response.ok || "error" in payload) {
       const err = (payload as ApiErrorPayload).error;
+      const code = err?.code ?? "UNKNOWN_ERROR";
+      const shouldAttemptRefresh =
+        options.auth &&
+        options.retryOn401 &&
+        (response.status === 401 || code === "UNAUTHORIZED" || code === "INVALID_TOKEN");
+
+      if (shouldAttemptRefresh) {
+        const refreshed = await this.refreshTokens();
+        if (refreshed) {
+          return this.request<T>(path, init, { ...options, retryOn401: false });
+        }
+
+        throw new ApiClientError({
+          code: "UNAUTHORIZED",
+          message: "Session expired.",
+          status: 401
+        });
+      }
+
       throw new ApiClientError({
-        code: err?.code ?? "UNKNOWN_ERROR",
+        code,
         message: err?.message ?? "Unknown server error.",
         details: err?.details,
         status: response.status
@@ -145,18 +161,24 @@ export class ServerApiClient {
     return payload.data;
   }
 
-  authRegister(input: { email: string; password: string; firstName?: string; lastName?: string }) {
-    return this.request<AuthResult>("/auth/register", {
+  authRegister(input: {
+    email: string;
+    password: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+  }) {
+    return this.request<Record<string, unknown>>("/auth/register", {
       method: "POST",
       body: JSON.stringify(input)
-    });
+    }).then(normalizeAuthResult);
   }
 
   authLogin(input: { email: string; password: string }) {
-    return this.request<AuthResult>("/auth/login", {
+    return this.request<Record<string, unknown>>("/auth/login", {
       method: "POST",
       body: JSON.stringify(input)
-    });
+    }).then(normalizeAuthResult);
   }
 
   authMe() {
@@ -200,16 +222,28 @@ export class ServerApiClient {
   }
 
   categoryCreate(input: CreateCategoryInput) {
+    const normalizedType = input.kind ?? "expense";
     return this.request<Category>("/me/categories", {
       method: "POST",
-      body: JSON.stringify(input)
+      body: JSON.stringify({
+        name: input.name,
+        color: input.color ?? "#64748b",
+        type: normalizedType,
+        kind: normalizedType
+      })
     }, { auth: true });
   }
 
   categoryUpdate(categoryId: string, input: UpdateCategoryInput) {
+    const normalizedType = input.kind ?? "expense";
     return this.request<Category>(`/me/categories/${categoryId}`, {
       method: "PUT",
-      body: JSON.stringify(input)
+      body: JSON.stringify({
+        name: input.name,
+        color: input.color ?? "#64748b",
+        type: normalizedType,
+        kind: normalizedType
+      })
     }, { auth: true });
   }
 
@@ -228,16 +262,34 @@ export class ServerApiClient {
   }
 
   transactionCreate(input: CreateTransactionInput) {
+    const normalizedDate = toIsoDatetime(input.date ?? input.occurredAt);
     return this.request<Transaction>("/me/transactions", {
       method: "POST",
-      body: JSON.stringify(input)
+      body: JSON.stringify({
+        accountId: Number(input.accountId),
+        categoryId: Number(input.categoryId),
+        amount: input.amount,
+        type: input.type,
+        description: input.description,
+        date: normalizedDate,
+        occurredAt: normalizedDate
+      })
     }, { auth: true });
   }
 
   transactionUpdate(transactionId: string, input: UpdateTransactionInput) {
+    const normalizedDate = toIsoDatetime(input.date ?? input.occurredAt);
     return this.request<Transaction>(`/me/transactions/${transactionId}`, {
       method: "PATCH",
-      body: JSON.stringify(input)
+      body: JSON.stringify({
+        accountId: input.accountId !== undefined ? Number(input.accountId) : undefined,
+        categoryId: input.categoryId !== undefined ? Number(input.categoryId) : undefined,
+        amount: input.amount,
+        type: input.type,
+        description: input.description,
+        date: normalizedDate,
+        occurredAt: normalizedDate
+      })
     }, { auth: true });
   }
 
@@ -277,3 +329,73 @@ export class ServerApiClient {
 }
 
 export const createApiClient = (event: RequestEvent) => new ServerApiClient(event);
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+
+const asString = (value: unknown): string | undefined =>
+  typeof value === "string" && value.trim().length > 0 ? value : undefined;
+
+const extractTokenPair = (data: Record<string, unknown>) => {
+  const tokens = asRecord(data.tokens);
+
+  const accessToken =
+    asString(data.accessToken) ??
+    asString(data.access_token) ??
+    asString(data.token) ??
+    asString(data.jwt) ??
+    asString(tokens.accessToken) ??
+    asString(tokens.access_token) ??
+    "";
+
+  const refreshToken =
+    asString(data.refreshToken) ??
+    asString(data.refresh_token) ??
+    asString(tokens.refreshToken) ??
+    asString(tokens.refresh_token);
+
+  return { accessToken, refreshToken };
+};
+
+const normalizeAuthResult = (data: Record<string, unknown>): AuthResult => {
+  const { accessToken, refreshToken } = extractTokenPair(data);
+  const user = asRecord(data.user);
+  const fallbackUser = asRecord(data.me);
+
+  if (!accessToken) {
+    throw new ApiClientError({
+      code: "INVALID_AUTH_RESPONSE",
+      message: "Login succeeded but no access token was returned.",
+      status: 500,
+      details: data
+    });
+  }
+
+  const resolvedUser = Object.keys(user).length > 0 ? user : fallbackUser;
+
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id: asString(resolvedUser.id) ?? "",
+      email: asString(resolvedUser.email) ?? "",
+      firstName: asString(resolvedUser.firstName) ?? asString(resolvedUser.first_name),
+      lastName: asString(resolvedUser.lastName) ?? asString(resolvedUser.last_name),
+      createdAt: asString(resolvedUser.createdAt) ?? asString(resolvedUser.created_at)
+    }
+  };
+};
+
+const toIsoDatetime = (value: unknown) => {
+  const raw = asString(value);
+  if (!raw) return "";
+
+  // Input from <input type="date"> arrives as YYYY-MM-DD; backend expects full ISO datetime in UTC.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return `${raw}T00:00:00.000Z`;
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+  return parsed.toISOString();
+};

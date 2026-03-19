@@ -4,12 +4,12 @@ import { z } from "zod";
 import { errorToActionFail, flattenZodErrors } from "$lib/utils/actionErrors";
 
 const transactionSchema = z.object({
-  accountId: z.string().min(1, "Account is required."),
-  categoryId: z.string().min(1, "Category is required."),
+  accountId: z.coerce.number({ invalid_type_error: "Account is required." }),
+  categoryId: z.coerce.number({ invalid_type_error: "Category is required." }),
   amount: z.coerce.number().positive("Amount must be positive."),
   type: z.enum(["income", "expense"]),
   description: z.string().optional(),
-  occurredAt: z.string().min(1, "Date is required.")
+  date: z.string().min(1, "Date is required.")
 });
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -44,7 +44,7 @@ export const actions: Actions = {
       amount: formData.get("amount"),
       type: formData.get("type"),
       description: formData.get("description"),
-      occurredAt: formData.get("occurredAt")
+      date: formData.get("occurredAt") ?? formData.get("date")
     });
 
     if (!parsed.success) {
@@ -72,7 +72,7 @@ export const actions: Actions = {
       amount: formData.get("amount"),
       type: formData.get("type"),
       description: formData.get("description"),
-      occurredAt: formData.get("occurredAt")
+      date: formData.get("occurredAt") ?? formData.get("date")
     });
 
     if (!parsed.success) {

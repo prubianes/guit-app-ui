@@ -9,7 +9,7 @@ const registerSchema = z
     email: z.string().email("Please enter a valid email address."),
     password: z.string().min(8, "Password must be at least 8 characters."),
     firstName: z.string().min(1, "First name is required."),
-    lastName: z.string().min(1, "Last name is required.")
+    lastName: z.string().optional()
   })
   .strict();
 
@@ -31,7 +31,16 @@ export const actions: Actions = {
     }
 
     try {
-      const auth = await locals.api.authRegister(parsed.data);
+      const name = [parsed.data.firstName, parsed.data.lastName].filter(Boolean).join(" ").trim();
+
+      const auth = await locals.api.authRegister({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        firstName: parsed.data.firstName,
+        lastName: parsed.data.lastName,
+        // Backend contract expects `name`; we derive it from first + last.
+        name
+      });
       setAuthCookies(cookies, {
         accessToken: auth.accessToken,
         refreshToken: auth.refreshToken
