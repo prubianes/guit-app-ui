@@ -12,6 +12,12 @@ export class ApiClientError extends Error {
   }
 }
 
+export const AUTH_FAILURE_CODES = new Set(["UNAUTHORIZED", "INVALID_TOKEN", "AUTH_EXPIRED"]);
+
+export const isAuthFailure = (error: unknown) =>
+  error instanceof ApiClientError &&
+  (error.status === 401 || AUTH_FAILURE_CODES.has(error.code));
+
 export const userMessageForCode = (code?: string) => {
   switch (code) {
     case "INVALID_CREDENTIALS":

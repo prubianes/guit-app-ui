@@ -1,8 +1,6 @@
 import type { RequestEvent } from "@sveltejs/kit";
 import {
   type Account,
-  type ApiErrorPayload,
-  type ApiResponse,
   type AuthResult,
   type Budget,
   type Category,
@@ -20,10 +18,23 @@ import {
 import { ApiClientError } from "$lib/api/errors";
 import { clearAuthCookies, REFRESH_COOKIE, setAuthCookies } from "$lib/auth/cookies";
 import { API_BASE_URL, API_VERSION } from "$lib/utils/env";
+import {
+  accountSchema,
+  authPayloadSchema,
+  budgetSchema,
+  categorySchema,
+  parseErrorEnvelope,
+  parseSuccessData,
+  transactionSchema,
+  userSchema
+} from "$lib/api/contracts";
+import { adaptCategoryInput, adaptTransactionInput, normalizeAuthResult } from "$lib/api/adapters";
+import { z } from "zod";
 
 type RequestOptions = {
   auth?: boolean;
   retryOn401?: boolean;
+  responseSchema?: z.ZodSchema<unknown>;
 };
 
 export class ServerApiClient {
@@ -51,9 +62,9 @@ export class ServerApiClient {
     return this.event.cookies.get("finance_refresh_token") ?? null;
   }
 
-  private async parseJson<T>(response: Response): Promise<ApiResponse<T>> {
+  private async parseJson(response: Response): Promise<unknown> {
     try {
-      return (await response.json()) as ApiResponse<T>;
+      return await response.json();
     } catch {
       throw new ApiClientError({
         code: "INVALID_RESPONSE",
@@ -75,15 +86,25 @@ export class ServerApiClient {
       }
     });
 
-    const payload = await this.parseJson<Record<string, unknown>>(response);
-
-    if (!response.ok || "error" in payload) {
+    const payload = await this.parseJson(response);
+    if (!response.ok) {
       clearAuthCookies(this.event.cookies);
       return false;
     }
 
-    const data = payload.data as Record<string, unknown>;
-    const { accessToken, refreshToken: nextRefresh } = extractTokenPair(data);
+    let data: Record<string, unknown>;
+    try {
+      data = parseSuccessData(authPayloadSchema, payload, response.status, "/auth/refresh") as Record<
+        string,
+        unknown
+      >;
+    } catch {
+      clearAuthCookies(this.event.cookies);
+      return false;
+    }
+
+    const normalizedAuth = normalizeAuthResult(data);
+    const { accessToken, refreshToken: nextRefresh } = normalizedAuth;
 
     if (!accessToken) {
       clearAuthCookies(this.event.cookies);
@@ -127,11 +148,12 @@ export class ServerApiClient {
       });
     }
 
-    const payload = await this.parseJson<T>(response);
+    const payload = await this.parseJson(response);
 
-    if (!response.ok || "error" in payload) {
-      const err = (payload as ApiErrorPayload).error;
-      const code = err?.code ?? "UNKNOWN_ERROR";
+    if (!response.ok) {
+      const parsedError = parseErrorEnvelope(payload, response.status);
+      const err = parsedError.error;
+      const code = err.code ?? "UNKNOWN_ERROR";
       const shouldAttemptRefresh =
         options.auth &&
         options.retryOn401 &&
@@ -152,13 +174,18 @@ export class ServerApiClient {
 
       throw new ApiClientError({
         code,
-        message: err?.message ?? "Unknown server error.",
-        details: err?.details,
+        message: err.message ?? "Unknown server error.",
+        details: err.details,
         status: response.status
       });
     }
 
-    return payload.data;
+    if (!options.responseSchema) {
+      const maybeEnvelope = payload as { data?: unknown };
+      return (maybeEnvelope?.data ?? payload) as T;
+    }
+
+    return parseSuccessData(options.responseSchema as z.ZodSchema<T>, payload, response.status, path);
   }
 
   authRegister(input: {
@@ -171,40 +198,46 @@ export class ServerApiClient {
     return this.request<Record<string, unknown>>("/auth/register", {
       method: "POST",
       body: JSON.stringify(input)
-    }).then(normalizeAuthResult);
+    }, { responseSchema: authPayloadSchema }).then(normalizeAuthResult);
   }
 
   authLogin(input: { email: string; password: string }) {
     return this.request<Record<string, unknown>>("/auth/login", {
       method: "POST",
       body: JSON.stringify(input)
-    }).then(normalizeAuthResult);
+    }, { responseSchema: authPayloadSchema }).then(normalizeAuthResult);
   }
 
   authMe() {
-    return this.request<User>("/me", undefined, { auth: true });
+    return this.request<User>("/me", undefined, { auth: true, responseSchema: userSchema });
   }
 
   accountsList() {
-    return this.request<Account[]>("/me/accounts", undefined, { auth: true });
+    return this.request<Account[]>("/me/accounts", undefined, {
+      auth: true,
+      responseSchema: z.array(accountSchema)
+    });
   }
 
   accountById(accountId: string) {
-    return this.request<Account>(`/me/accounts/${accountId}`, undefined, { auth: true });
+    return this.request<Account>(`/me/accounts/${accountId}`, undefined, {
+      auth: true,
+      responseSchema: accountSchema
+    });
   }
 
   accountCreate(input: CreateAccountInput) {
     return this.request<Account>("/me/accounts", {
       method: "POST",
       body: JSON.stringify(input)
-    }, { auth: true });
+    }, { auth: true, responseSchema: accountSchema });
   }
 
   accountUpdate(accountId: string, input: UpdateAccountInput) {
     return this.request<Account>(`/me/accounts/${accountId}`, {
       method: "PATCH",
       body: JSON.stringify(input)
-    }, { auth: true });
+    }, { auth: true, responseSchema: accountSchema });
   }
 
   accountDelete(accountId: string) {
@@ -214,37 +247,31 @@ export class ServerApiClient {
   }
 
   categoriesList() {
-    return this.request<Category[]>("/me/categories", undefined, { auth: true });
+    return this.request<Category[]>("/me/categories", undefined, {
+      auth: true,
+      responseSchema: z.array(categorySchema)
+    });
   }
 
   categoryById(categoryId: string) {
-    return this.request<Category>(`/me/categories/${categoryId}`, undefined, { auth: true });
+    return this.request<Category>(`/me/categories/${categoryId}`, undefined, {
+      auth: true,
+      responseSchema: categorySchema
+    });
   }
 
   categoryCreate(input: CreateCategoryInput) {
-    const normalizedType = input.kind ?? "expense";
     return this.request<Category>("/me/categories", {
       method: "POST",
-      body: JSON.stringify({
-        name: input.name,
-        color: input.color ?? "#64748b",
-        type: normalizedType,
-        kind: normalizedType
-      })
-    }, { auth: true });
+      body: JSON.stringify(adaptCategoryInput(input))
+    }, { auth: true, responseSchema: categorySchema });
   }
 
   categoryUpdate(categoryId: string, input: UpdateCategoryInput) {
-    const normalizedType = input.kind ?? "expense";
     return this.request<Category>(`/me/categories/${categoryId}`, {
       method: "PUT",
-      body: JSON.stringify({
-        name: input.name,
-        color: input.color ?? "#64748b",
-        type: normalizedType,
-        kind: normalizedType
-      })
-    }, { auth: true });
+      body: JSON.stringify(adaptCategoryInput(input))
+    }, { auth: true, responseSchema: categorySchema });
   }
 
   categoryDelete(categoryId: string) {
@@ -254,43 +281,31 @@ export class ServerApiClient {
   }
 
   transactionsList() {
-    return this.request<Transaction[]>("/me/transactions", undefined, { auth: true });
+    return this.request<Transaction[]>("/me/transactions", undefined, {
+      auth: true,
+      responseSchema: z.array(transactionSchema)
+    });
   }
 
   transactionById(transactionId: string) {
-    return this.request<Transaction>(`/me/transactions/${transactionId}`, undefined, { auth: true });
+    return this.request<Transaction>(`/me/transactions/${transactionId}`, undefined, {
+      auth: true,
+      responseSchema: transactionSchema
+    });
   }
 
   transactionCreate(input: CreateTransactionInput) {
-    const normalizedDate = toIsoDatetime(input.date ?? input.occurredAt);
     return this.request<Transaction>("/me/transactions", {
       method: "POST",
-      body: JSON.stringify({
-        accountId: Number(input.accountId),
-        categoryId: Number(input.categoryId),
-        amount: input.amount,
-        type: input.type,
-        description: input.description,
-        date: normalizedDate,
-        occurredAt: normalizedDate
-      })
-    }, { auth: true });
+      body: JSON.stringify(adaptTransactionInput(input))
+    }, { auth: true, responseSchema: transactionSchema });
   }
 
   transactionUpdate(transactionId: string, input: UpdateTransactionInput) {
-    const normalizedDate = toIsoDatetime(input.date ?? input.occurredAt);
     return this.request<Transaction>(`/me/transactions/${transactionId}`, {
       method: "PATCH",
-      body: JSON.stringify({
-        accountId: input.accountId !== undefined ? Number(input.accountId) : undefined,
-        categoryId: input.categoryId !== undefined ? Number(input.categoryId) : undefined,
-        amount: input.amount,
-        type: input.type,
-        description: input.description,
-        date: normalizedDate,
-        occurredAt: normalizedDate
-      })
-    }, { auth: true });
+      body: JSON.stringify(adaptTransactionInput(input))
+    }, { auth: true, responseSchema: transactionSchema });
   }
 
   transactionDelete(transactionId: string) {
@@ -300,25 +315,31 @@ export class ServerApiClient {
   }
 
   budgetsList() {
-    return this.request<Budget[]>("/me/budgets", undefined, { auth: true });
+    return this.request<Budget[]>("/me/budgets", undefined, {
+      auth: true,
+      responseSchema: z.array(budgetSchema)
+    });
   }
 
   budgetById(budgetId: string) {
-    return this.request<Budget>(`/me/budgets/${budgetId}`, undefined, { auth: true });
+    return this.request<Budget>(`/me/budgets/${budgetId}`, undefined, {
+      auth: true,
+      responseSchema: budgetSchema
+    });
   }
 
   budgetCreate(input: CreateBudgetInput) {
     return this.request<Budget>("/me/budgets", {
       method: "POST",
       body: JSON.stringify(input)
-    }, { auth: true });
+    }, { auth: true, responseSchema: budgetSchema });
   }
 
   budgetUpdate(budgetId: string, input: UpdateBudgetInput) {
     return this.request<Budget>(`/me/budgets/${budgetId}`, {
       method: "PATCH",
       body: JSON.stringify(input)
-    }, { auth: true });
+    }, { auth: true, responseSchema: budgetSchema });
   }
 
   budgetDelete(budgetId: string) {
@@ -329,73 +350,3 @@ export class ServerApiClient {
 }
 
 export const createApiClient = (event: RequestEvent) => new ServerApiClient(event);
-
-const asRecord = (value: unknown): Record<string, unknown> =>
-  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-
-const asString = (value: unknown): string | undefined =>
-  typeof value === "string" && value.trim().length > 0 ? value : undefined;
-
-const extractTokenPair = (data: Record<string, unknown>) => {
-  const tokens = asRecord(data.tokens);
-
-  const accessToken =
-    asString(data.accessToken) ??
-    asString(data.access_token) ??
-    asString(data.token) ??
-    asString(data.jwt) ??
-    asString(tokens.accessToken) ??
-    asString(tokens.access_token) ??
-    "";
-
-  const refreshToken =
-    asString(data.refreshToken) ??
-    asString(data.refresh_token) ??
-    asString(tokens.refreshToken) ??
-    asString(tokens.refresh_token);
-
-  return { accessToken, refreshToken };
-};
-
-const normalizeAuthResult = (data: Record<string, unknown>): AuthResult => {
-  const { accessToken, refreshToken } = extractTokenPair(data);
-  const user = asRecord(data.user);
-  const fallbackUser = asRecord(data.me);
-
-  if (!accessToken) {
-    throw new ApiClientError({
-      code: "INVALID_AUTH_RESPONSE",
-      message: "Login succeeded but no access token was returned.",
-      status: 500,
-      details: data
-    });
-  }
-
-  const resolvedUser = Object.keys(user).length > 0 ? user : fallbackUser;
-
-  return {
-    accessToken,
-    refreshToken,
-    user: {
-      id: asString(resolvedUser.id) ?? "",
-      email: asString(resolvedUser.email) ?? "",
-      firstName: asString(resolvedUser.firstName) ?? asString(resolvedUser.first_name),
-      lastName: asString(resolvedUser.lastName) ?? asString(resolvedUser.last_name),
-      createdAt: asString(resolvedUser.createdAt) ?? asString(resolvedUser.created_at)
-    }
-  };
-};
-
-const toIsoDatetime = (value: unknown) => {
-  const raw = asString(value);
-  if (!raw) return "";
-
-  // Input from <input type="date"> arrives as YYYY-MM-DD; backend expects full ISO datetime in UTC.
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    return `${raw}T00:00:00.000Z`;
-  }
-
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return raw;
-  return parsed.toISOString();
-};

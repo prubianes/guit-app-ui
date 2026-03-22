@@ -1,5 +1,5 @@
 import { clearAuthCookies } from "$lib/auth/cookies";
-import { ApiClientError } from "$lib/api/errors";
+import { isAuthFailure } from "$lib/api/errors";
 import { redirect } from "@sveltejs/kit";
 import type { LayoutServerLoad } from "./$types";
 
@@ -9,11 +9,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
     locals.session.user = user;
     return { user };
   } catch (error) {
-    const isAuthError =
-      error instanceof ApiClientError &&
-      (error.code === "UNAUTHORIZED" || error.code === "INVALID_TOKEN" || error.status === 401);
-
-    if (isAuthError) {
+    if (isAuthFailure(error)) {
       clearAuthCookies(cookies);
       throw redirect(303, "/login");
     }
