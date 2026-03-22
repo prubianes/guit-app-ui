@@ -1,7 +1,12 @@
-import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 import { z } from "zod";
-import { errorToActionFail, flattenZodErrors } from "$lib/utils/actionErrors";
+import { errorToActionFail } from "$lib/utils/actionErrors";
+import {
+  actionFailure,
+  actionSuccess,
+  actionValidationFail,
+  missingIdFailure
+} from "$lib/utils/actionResponses";
 
 const budgetSchema = z.object({
   categoryId: z.string().min(1, "Category is required."),
@@ -44,23 +49,20 @@ export const actions: Actions = {
     });
 
     if (!parsed.success) {
-      return fail(400, {
-        ...errorToActionFail(new Error("VALIDATION_ERROR")),
-        fieldErrors: flattenZodErrors(parsed.error.format())
-      });
+      return actionValidationFail(parsed.error.format());
     }
 
     try {
       await locals.api.budgetCreate(parsed.data);
-      return { success: true, message: "Budget created." };
+      return actionSuccess("Budget created.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   },
   update: async ({ request, locals }) => {
     const formData = await request.formData();
     const budgetId = String(formData.get("budgetId") || "");
-    if (!budgetId) return fail(400, { message: "Missing budget id." });
+    if (!budgetId) return missingIdFailure("Missing budget id.");
 
     const parsed = budgetSchema.safeParse({
       categoryId: formData.get("categoryId"),
@@ -71,29 +73,26 @@ export const actions: Actions = {
     });
 
     if (!parsed.success) {
-      return fail(400, {
-        ...errorToActionFail(new Error("VALIDATION_ERROR")),
-        fieldErrors: flattenZodErrors(parsed.error.format())
-      });
+      return actionValidationFail(parsed.error.format());
     }
 
     try {
       await locals.api.budgetUpdate(budgetId, parsed.data);
-      return { success: true, message: "Budget updated." };
+      return actionSuccess("Budget updated.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   },
   delete: async ({ request, locals }) => {
     const formData = await request.formData();
     const budgetId = String(formData.get("budgetId") || "");
-    if (!budgetId) return fail(400, { message: "Missing budget id." });
+    if (!budgetId) return missingIdFailure("Missing budget id.");
 
     try {
       await locals.api.budgetDelete(budgetId);
-      return { success: true, message: "Budget deleted." };
+      return actionSuccess("Budget deleted.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   }
 };

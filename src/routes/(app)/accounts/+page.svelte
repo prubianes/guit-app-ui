@@ -18,12 +18,14 @@
     { key: "name", label: "Name" },
     { key: "type", label: "Type" },
     { key: "currency", label: "Currency" },
-    { key: "balance", label: "Balance" }
+    { key: "balance", label: "Balance", type: "currency" as const }
   ];
 
   let modalOpen = $state(false);
   let confirmOpen = $state(false);
   let selected: Account | null = $state(null);
+  let submitting = $state(false);
+  let deleting = $state(false);
 
   const openCreate = () => {
     selected = null;
@@ -83,18 +85,29 @@
       action={selected ? "?/update" : "?/create"}
       class="grid gap-3"
       use:enhance={() => {
+        submitting = true;
         return async ({ result, update }) => {
           if (result.type === "success") {
+            submitting = false;
             await onActionDone(true, selected ? "Account updated." : "Account created.", "Request failed.");
             return;
           }
           if (result.type === "failure") {
             await update();
+            submitting = false;
             await onActionDone(false, "", "Could not save account.");
+          }
+          if (result.type === "error" || result.type === "redirect") {
+            submitting = false;
           }
         };
       }}
     >
+      {#if form?.message}
+        <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {String(form.message)}
+        </div>
+      {/if}
       {#if selected}
         <input type="hidden" name="accountId" value={selected.id} />
       {/if}
@@ -131,8 +144,10 @@
       />
       <FormField label="Institution" name="institution" value={selected?.institution || ""} />
       <div class="mt-2 flex justify-end gap-2">
-        <Button variant="ghost" on:click={() => (modalOpen = false)}>Cancel</Button>
-        <Button type="submit">{selected ? "Save changes" : "Create"}</Button>
+        <Button variant="ghost" on:click={() => (modalOpen = false)} disabled={submitting}>Cancel</Button>
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Saving..." : selected ? "Save changes" : "Create"}
+        </Button>
       </div>
     </form>
   </Modal>
@@ -154,14 +169,20 @@
     action="?/delete"
     class="hidden"
     use:enhance={() => {
+      deleting = true;
       return async ({ result, update }) => {
         if (result.type === "success") {
+          deleting = false;
           await onActionDone(true, "Account deleted.", "Delete failed.");
           return;
         }
         if (result.type === "failure") {
           await update();
+          deleting = false;
           await onActionDone(false, "", "Could not delete account.");
+        }
+        if (result.type === "error" || result.type === "redirect") {
+          deleting = false;
         }
       };
     }}

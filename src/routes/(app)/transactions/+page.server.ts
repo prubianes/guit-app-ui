@@ -1,7 +1,12 @@
-import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 import { z } from "zod";
-import { errorToActionFail, flattenZodErrors } from "$lib/utils/actionErrors";
+import { errorToActionFail } from "$lib/utils/actionErrors";
+import {
+  actionFailure,
+  actionSuccess,
+  actionValidationFail,
+  missingIdFailure
+} from "$lib/utils/actionResponses";
 
 const transactionSchema = z.object({
   accountId: z.coerce.number({ invalid_type_error: "Account is required." }),
@@ -48,23 +53,20 @@ export const actions: Actions = {
     });
 
     if (!parsed.success) {
-      return fail(400, {
-        ...errorToActionFail(new Error("VALIDATION_ERROR")),
-        fieldErrors: flattenZodErrors(parsed.error.format())
-      });
+      return actionValidationFail(parsed.error.format());
     }
 
     try {
       await locals.api.transactionCreate(parsed.data);
-      return { success: true, message: "Transaction created." };
+      return actionSuccess("Transaction created.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   },
   update: async ({ request, locals }) => {
     const formData = await request.formData();
     const transactionId = String(formData.get("transactionId") || "");
-    if (!transactionId) return fail(400, { message: "Missing transaction id." });
+    if (!transactionId) return missingIdFailure("Missing transaction id.");
 
     const parsed = transactionSchema.safeParse({
       accountId: formData.get("accountId"),
@@ -76,29 +78,26 @@ export const actions: Actions = {
     });
 
     if (!parsed.success) {
-      return fail(400, {
-        ...errorToActionFail(new Error("VALIDATION_ERROR")),
-        fieldErrors: flattenZodErrors(parsed.error.format())
-      });
+      return actionValidationFail(parsed.error.format());
     }
 
     try {
       await locals.api.transactionUpdate(transactionId, parsed.data);
-      return { success: true, message: "Transaction updated." };
+      return actionSuccess("Transaction updated.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   },
   delete: async ({ request, locals }) => {
     const formData = await request.formData();
     const transactionId = String(formData.get("transactionId") || "");
-    if (!transactionId) return fail(400, { message: "Missing transaction id." });
+    if (!transactionId) return missingIdFailure("Missing transaction id.");
 
     try {
       await locals.api.transactionDelete(transactionId);
-      return { success: true, message: "Transaction deleted." };
+      return actionSuccess("Transaction deleted.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   }
 };

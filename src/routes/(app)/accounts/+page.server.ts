@@ -1,7 +1,12 @@
-import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 import { z } from "zod";
-import { errorToActionFail, flattenZodErrors } from "$lib/utils/actionErrors";
+import { errorToActionFail } from "$lib/utils/actionErrors";
+import {
+  actionFailure,
+  actionSuccess,
+  actionValidationFail,
+  missingIdFailure
+} from "$lib/utils/actionResponses";
 
 const accountSchema = z.object({
   name: z.string().min(1, "Account name is required."),
@@ -35,17 +40,14 @@ export const actions: Actions = {
     });
 
     if (!parsed.success) {
-      return fail(400, {
-        ...errorToActionFail(new Error("VALIDATION_ERROR")),
-        fieldErrors: flattenZodErrors(parsed.error.format())
-      });
+      return actionValidationFail(parsed.error.format());
     }
 
     try {
       await locals.api.accountCreate(parsed.data);
-      return { success: true, message: "Account created." };
+      return actionSuccess("Account created.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   },
   update: async ({ request, locals }) => {
@@ -61,35 +63,32 @@ export const actions: Actions = {
     });
 
     if (!accountId) {
-      return fail(400, { message: "Missing account id." });
+      return missingIdFailure("Missing account id.");
     }
 
     if (!parsed.success) {
-      return fail(400, {
-        ...errorToActionFail(new Error("VALIDATION_ERROR")),
-        fieldErrors: flattenZodErrors(parsed.error.format())
-      });
+      return actionValidationFail(parsed.error.format());
     }
 
     try {
       await locals.api.accountUpdate(accountId, parsed.data);
-      return { success: true, message: "Account updated." };
+      return actionSuccess("Account updated.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   },
   delete: async ({ request, locals }) => {
     const formData = await request.formData();
     const accountId = String(formData.get("accountId") || "");
     if (!accountId) {
-      return fail(400, { message: "Missing account id." });
+      return missingIdFailure("Missing account id.");
     }
 
     try {
       await locals.api.accountDelete(accountId);
-      return { success: true, message: "Account deleted." };
+      return actionSuccess("Account deleted.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   }
 };

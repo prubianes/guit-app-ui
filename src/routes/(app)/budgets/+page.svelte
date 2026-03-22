@@ -10,17 +10,19 @@
   import { toasts } from "$lib/components/toastStore";
   import type { PageData } from "./$types";
 
-  let { data }: { data: PageData } = $props();
+  let { data, form }: { data: PageData; form: Record<string, unknown> | null } = $props();
+  const fieldErrors = $derived((form?.fieldErrors || {}) as Record<string, string>);
 
   const columns = [
     { key: "categoryId", label: "Category" },
     { key: "period", label: "Period" },
-    { key: "amount", label: "Amount" }
+    { key: "amount", label: "Amount", type: "currency" as const }
   ];
 
   let modalOpen = $state(false);
   let confirmOpen = $state(false);
   let selected: Budget | null = $state(null);
+  let submitting = $state(false);
 
   const openCreate = () => {
     selected = null;
@@ -80,15 +82,29 @@
       action={selected ? "?/update" : "?/create"}
       class="grid gap-3"
       use:enhance={() => {
-        return async ({ result }) => {
+        submitting = true;
+        return async ({ result, update }) => {
           if (result.type === "success") {
+            submitting = false;
             await done(true, selected ? "Budget updated." : "Budget created.", "Request failed.");
             return;
+          }
+          if (result.type === "failure") {
+            await update();
+            submitting = false;
+          }
+          if (result.type === "error" || result.type === "redirect") {
+            submitting = false;
           }
           await done(false, "", "Could not save budget.");
         };
       }}
     >
+      {#if form?.message}
+        <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {String(form.message)}
+        </div>
+      {/if}
       {#if selected}
         <input type="hidden" name="budgetId" value={selected.id} />
       {/if}
@@ -105,6 +121,9 @@
             <option value={category.id}>{category.name}</option>
           {/each}
         </select>
+        {#if fieldErrors.categoryId}
+          <span class="text-xs text-red-600">{fieldErrors.categoryId}</span>
+        {/if}
       </label>
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="grid gap-1.5">
@@ -117,6 +136,9 @@
             class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
             required
           />
+          {#if fieldErrors.amount}
+            <span class="text-xs text-red-600">{fieldErrors.amount}</span>
+          {/if}
         </label>
         <label class="grid gap-1.5">
           <span class="text-sm font-medium text-slate-700">Period</span>
@@ -129,6 +151,9 @@
             <option value="monthly">Monthly</option>
             <option value="yearly">Yearly</option>
           </select>
+          {#if fieldErrors.period}
+            <span class="text-xs text-red-600">{fieldErrors.period}</span>
+          {/if}
         </label>
       </div>
       <div class="grid gap-3 sm:grid-cols-2">
@@ -152,8 +177,10 @@
         </label>
       </div>
       <div class="mt-2 flex justify-end gap-2">
-        <Button variant="ghost" on:click={() => (modalOpen = false)}>Cancel</Button>
-        <Button type="submit">{selected ? "Save changes" : "Create"}</Button>
+        <Button variant="ghost" on:click={() => (modalOpen = false)} disabled={submitting}>Cancel</Button>
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Saving..." : selected ? "Save changes" : "Create"}
+        </Button>
       </div>
     </form>
   </Modal>

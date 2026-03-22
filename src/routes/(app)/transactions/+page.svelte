@@ -10,18 +10,20 @@
   import { toasts } from "$lib/components/toastStore";
   import type { PageData } from "./$types";
 
-  let { data }: { data: PageData } = $props();
+  let { data, form }: { data: PageData; form: Record<string, unknown> | null } = $props();
+  const fieldErrors = $derived((form?.fieldErrors || {}) as Record<string, string>);
 
   const columns = [
     { key: "description", label: "Description" },
     { key: "type", label: "Type" },
-    { key: "amount", label: "Amount" },
-    { key: "occurredAt", label: "Date" }
+    { key: "amount", label: "Amount", type: "currency" as const },
+    { key: "date", label: "Date", type: "date" as const }
   ];
 
   let modalOpen = $state(false);
   let confirmOpen = $state(false);
   let selected: Transaction | null = $state(null);
+  let submitting = $state(false);
 
   const openCreate = () => {
     selected = null;
@@ -83,15 +85,29 @@
       action={selected ? "?/update" : "?/create"}
       class="grid gap-3"
       use:enhance={() => {
-        return async ({ result }) => {
+        submitting = true;
+        return async ({ result, update }) => {
           if (result.type === "success") {
+            submitting = false;
             await done(true, selected ? "Transaction updated." : "Transaction created.", "Request failed.");
             return;
+          }
+          if (result.type === "failure") {
+            await update();
+            submitting = false;
+          }
+          if (result.type === "error" || result.type === "redirect") {
+            submitting = false;
           }
           await done(false, "", "Could not save transaction.");
         };
       }}
     >
+      {#if form?.message}
+        <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {String(form.message)}
+        </div>
+      {/if}
       {#if selected}
         <input type="hidden" name="transactionId" value={selected.id} />
       {/if}
@@ -109,6 +125,9 @@
               <option value={account.id}>{account.name}</option>
             {/each}
           </select>
+          {#if fieldErrors.accountId}
+            <span class="text-xs text-red-600">{fieldErrors.accountId}</span>
+          {/if}
         </label>
         <label class="grid gap-1.5">
           <span class="text-sm font-medium text-slate-700">Category</span>
@@ -123,6 +142,9 @@
               <option value={category.id}>{category.name}</option>
             {/each}
           </select>
+          {#if fieldErrors.categoryId}
+            <span class="text-xs text-red-600">{fieldErrors.categoryId}</span>
+          {/if}
         </label>
       </div>
 
@@ -144,6 +166,9 @@
             value={selected?.amount || 0}
             required
           />
+          {#if fieldErrors.amount}
+            <span class="text-xs text-red-600">{fieldErrors.amount}</span>
+          {/if}
         </label>
       </div>
 
@@ -153,9 +178,12 @@
           name="occurredAt"
           type="date"
           class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-          value={selected?.occurredAt?.slice(0, 10) || ""}
+          value={(selected?.date || selected?.occurredAt || "").slice(0, 10)}
           required
         />
+        {#if fieldErrors.date || fieldErrors.occurredAt}
+          <span class="text-xs text-red-600">{fieldErrors.date || fieldErrors.occurredAt}</span>
+        {/if}
       </label>
 
       <label class="grid gap-1.5">
@@ -168,8 +196,10 @@
       </label>
 
       <div class="mt-2 flex justify-end gap-2">
-        <Button variant="ghost" on:click={() => (modalOpen = false)}>Cancel</Button>
-        <Button type="submit">{selected ? "Save changes" : "Create"}</Button>
+        <Button variant="ghost" on:click={() => (modalOpen = false)} disabled={submitting}>Cancel</Button>
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Saving..." : selected ? "Save changes" : "Create"}
+        </Button>
       </div>
     </form>
   </Modal>

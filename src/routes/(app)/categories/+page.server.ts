@@ -1,7 +1,12 @@
-import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 import { z } from "zod";
-import { errorToActionFail, flattenZodErrors } from "$lib/utils/actionErrors";
+import { errorToActionFail } from "$lib/utils/actionErrors";
+import {
+  actionFailure,
+  actionSuccess,
+  actionValidationFail,
+  missingIdFailure
+} from "$lib/utils/actionResponses";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Category name is required."),
@@ -31,17 +36,14 @@ export const actions: Actions = {
     });
 
     if (!parsed.success) {
-      return fail(400, {
-        ...errorToActionFail(new Error("VALIDATION_ERROR")),
-        fieldErrors: flattenZodErrors(parsed.error.format())
-      });
+      return actionValidationFail(parsed.error.format());
     }
 
     try {
       await locals.api.categoryCreate(parsed.data);
-      return { success: true, message: "Category created." };
+      return actionSuccess("Category created.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   },
   update: async ({ request, locals }) => {
@@ -55,33 +57,30 @@ export const actions: Actions = {
     });
 
     if (!categoryId) {
-      return fail(400, { message: "Missing category id." });
+      return missingIdFailure("Missing category id.");
     }
 
     if (!parsed.success) {
-      return fail(400, {
-        ...errorToActionFail(new Error("VALIDATION_ERROR")),
-        fieldErrors: flattenZodErrors(parsed.error.format())
-      });
+      return actionValidationFail(parsed.error.format());
     }
 
     try {
       await locals.api.categoryUpdate(categoryId, parsed.data);
-      return { success: true, message: "Category updated." };
+      return actionSuccess("Category updated.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   },
   delete: async ({ request, locals }) => {
     const formData = await request.formData();
     const categoryId = String(formData.get("categoryId") || "");
-    if (!categoryId) return fail(400, { message: "Missing category id." });
+    if (!categoryId) return missingIdFailure("Missing category id.");
 
     try {
       await locals.api.categoryDelete(categoryId);
-      return { success: true, message: "Category deleted." };
+      return actionSuccess("Category deleted.");
     } catch (error) {
-      return fail(400, errorToActionFail(error));
+      return actionFailure(errorToActionFail(error));
     }
   }
 };
