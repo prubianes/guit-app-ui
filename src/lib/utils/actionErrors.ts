@@ -1,4 +1,5 @@
 import { ApiClientError, userMessageForCode } from "$lib/api/errors";
+import { log } from "$lib/utils/logger";
 
 export type ActionFail = {
   success?: false;
@@ -20,20 +21,6 @@ export const flattenZodErrors = (errors: Record<string, unknown>) => {
 
 export const errorToActionFail = (error: unknown): ActionFail => {
   if (error instanceof ApiClientError) {
-    console.error(
-      "API error:",
-      JSON.stringify(
-        {
-          code: error.code,
-          message: error.message,
-          status: error.status,
-          details: error.details
-        },
-        null,
-        2
-      )
-    );
-
     const fieldErrors = extractFieldErrorsFromDetails(error.details);
     return {
       success: false,
@@ -43,7 +30,10 @@ export const errorToActionFail = (error: unknown): ActionFail => {
     };
   }
 
-  console.error("Unexpected action error:", error);
+  log("error", "action.error", {
+    message: "Unexpected action error",
+    error: error instanceof Error ? error.message : String(error)
+  });
 
   return {
     success: false,

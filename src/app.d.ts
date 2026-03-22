@@ -6,6 +6,7 @@ declare global {
     interface Locals {
       api: ServerApiClient;
       session: Session;
+      requestId: string;
     }
   }
 }

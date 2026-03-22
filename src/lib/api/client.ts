@@ -30,6 +30,7 @@ import {
 } from "$lib/api/contracts";
 import { adaptCategoryInput, adaptTransactionInput, normalizeAuthResult } from "$lib/api/adapters";
 import { z } from "zod";
+import { logApiError } from "$lib/utils/logger";
 
 type RequestOptions = {
   auth?: boolean;
@@ -171,6 +172,17 @@ export class ServerApiClient {
           status: 401
         });
       }
+
+      logApiError({
+        requestId: this.event.locals.requestId,
+        route: this.event.route.id ?? undefined,
+        endpoint: path,
+        method: init?.method ?? "GET",
+        code,
+        message: err.message ?? "Unknown server error.",
+        status: response.status,
+        details: err.details
+      });
 
       throw new ApiClientError({
         code,

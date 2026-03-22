@@ -48,7 +48,7 @@ export const actions: Actions = {
       categoryId: formData.get("categoryId"),
       amount: formData.get("amount"),
       type: formData.get("type"),
-      description: formData.get("description"),
+      description: String(formData.get("description") ?? "") || undefined,
       date: formData.get("occurredAt") ?? formData.get("date")
     });
 
@@ -73,7 +73,7 @@ export const actions: Actions = {
       categoryId: formData.get("categoryId"),
       amount: formData.get("amount"),
       type: formData.get("type"),
-      description: formData.get("description"),
+      description: String(formData.get("description") ?? "") || undefined,
       date: formData.get("occurredAt") ?? formData.get("date")
     });
 
