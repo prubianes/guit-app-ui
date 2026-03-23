@@ -3,6 +3,7 @@
   import { goto } from "$app/navigation";
   import Button from "$lib/components/Button.svelte";
   import FormField from "$lib/components/FormField.svelte";
+  import ThemeToggle from "$lib/components/ThemeToggle.svelte";
   import { toasts } from "$lib/components/toastStore";
 
   let { form }: { form: Record<string, unknown> | null } = $props();
@@ -10,6 +11,7 @@
 </script>
 
 <main class="mx-auto grid min-h-screen w-full max-w-5xl place-items-center px-4 py-10">
+  <ThemeToggle class="fixed right-4 top-4 z-20" />
   <section class="grid w-full gap-6 rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-[var(--shadow)] lg:grid-cols-[1.1fr_0.9fr]">
     <div class="grid content-end gap-4 rounded-[2rem] border border-slate-200 bg-white p-6">
       <p class="text-xs uppercase tracking-[0.22em] text-slate-500">The New More</p>
@@ -33,9 +35,9 @@
         method="POST"
         use:enhance={() => {
           return async ({ result, update }) => {
-            if (result.type === "success") {
+            if (result.type === "redirect") {
               toasts.success("Account created successfully.");
-              await goto("/");
+              await goto(result.location);
               return;
             }
             if (result.type === "failure") {

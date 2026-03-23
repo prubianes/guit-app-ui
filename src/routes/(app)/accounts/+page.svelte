@@ -20,6 +20,15 @@
     { key: "currency", label: "Currency" },
     { key: "balance", label: "Balance", type: "currency" as const }
   ];
+  const accountTypeOptions = [
+    { value: "checking", label: "Checking" },
+    { value: "savings", label: "Savings" },
+    { value: "cash", label: "Cash" },
+    { value: "credit_card", label: "Credit Card" },
+    { value: "investment", label: "Investment" },
+    { value: "loan", label: "Loan" },
+    { value: "other", label: "Other" }
+  ];
 
   let modalOpen = $state(false);
   let confirmOpen = $state(false);
@@ -119,13 +128,30 @@
         required
       />
       <div class="grid gap-3 sm:grid-cols-2">
-        <FormField
-          label="Type"
-          name="type"
-          value={selected?.type || ""}
-          error={fieldErrors.type}
-          required
-        />
+        <label class="grid gap-1.5">
+          <span class="text-sm font-medium text-slate-700">Type</span>
+          <select
+            name="type"
+            class={`h-[42px] w-full rounded-lg border bg-white px-3 py-2 text-sm ${
+              fieldErrors.type ? "border-red-500" : "border-slate-300"
+            }`}
+            required
+            value={selected?.type || "checking"}
+          >
+            {#if selected}
+              {@const selectedType = selected.type}
+              {#if !accountTypeOptions.some((option) => option.value === selectedType)}
+                <option value={selectedType}>{selectedType}</option>
+              {/if}
+            {/if}
+            {#each accountTypeOptions as option}
+              <option value={option.value}>{option.label}</option>
+            {/each}
+          </select>
+          {#if fieldErrors.type}
+            <span class="text-xs text-red-600">{fieldErrors.type}</span>
+          {/if}
+        </label>
         <FormField
           label="Currency"
           name="currency"

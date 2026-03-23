@@ -20,6 +20,7 @@ import { clearAuthCookies, REFRESH_COOKIE, setAuthCookies } from "$lib/auth/cook
 import { API_BASE_URL, API_VERSION } from "$lib/utils/env";
 import {
   accountSchema,
+  accountListSchema,
   authPayloadSchema,
   budgetSchema,
   categorySchema,
@@ -227,7 +228,7 @@ export class ServerApiClient {
   accountsList() {
     return this.request<Account[]>("/me/accounts", undefined, {
       auth: true,
-      responseSchema: z.array(accountSchema)
+      responseSchema: accountListSchema
     });
   }
 

@@ -1,4 +1,4 @@
-import { fail } from "@sveltejs/kit";
+import { fail, isRedirect, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 import { z } from "zod";
 import { setAuthCookies } from "$lib/auth/cookies";
@@ -49,10 +49,11 @@ export const actions: Actions = {
         accessToken: auth.accessToken,
         refreshToken: auth.refreshToken
       });
-      return {
-        success: true
-      };
+      throw redirect(303, "/");
     } catch (error) {
+      if (isRedirect(error)) {
+        throw error;
+      }
       return fail(400, errorToActionFail(error));
     }
   }

@@ -24,14 +24,27 @@
   let confirmOpen = $state(false);
   let selected: Transaction | null = $state(null);
   let submitting = $state(false);
+  let formAccountId = $state("");
+  let formCategoryId = $state("");
+  let formType = $state<"income" | "expense">("expense");
+
+  const filteredCategories = $derived(
+    data.categories.filter((category) => (category.kind ?? "expense") === formType)
+  );
 
   const openCreate = () => {
     selected = null;
+    formAccountId = "";
+    formCategoryId = "";
+    formType = "expense";
     modalOpen = true;
   };
 
   const openEdit = (transaction: Transaction) => {
     selected = transaction;
+    formAccountId = String(transaction.accountId ?? "");
+    formCategoryId = String(transaction.categoryId ?? "");
+    formType = transaction.type;
     modalOpen = true;
   };
 
@@ -50,6 +63,17 @@
       return;
     }
     toasts.error(bad);
+  };
+
+  const onTypeChange = (event: Event) => {
+    formType = (event.currentTarget as HTMLSelectElement).value as "income" | "expense";
+    const selectedCategoryStillValid = data.categories.some(
+      (category) =>
+        String(category.id) === String(formCategoryId) && (category.kind ?? "expense") === formType
+    );
+    if (!selectedCategoryStillValid) {
+      formCategoryId = "";
+    }
   };
 </script>
 
@@ -116,8 +140,8 @@
           <span class="text-sm font-medium text-slate-700">Account</span>
           <select
             name="accountId"
-            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-            value={selected?.accountId || ""}
+            class="h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            bind:value={formAccountId}
             required
           >
             <option value="" disabled>Select account</option>
@@ -129,16 +153,37 @@
             <span class="text-xs text-red-600">{fieldErrors.accountId}</span>
           {/if}
         </label>
+
+        <label class="grid gap-1.5">
+          <span class="text-sm font-medium text-slate-700">Type</span>
+          <select
+            name="type"
+            class="h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            bind:value={formType}
+            onchange={onTypeChange}
+          >
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+          </select>
+          {#if fieldErrors.type}
+            <span class="text-xs text-red-600">{fieldErrors.type}</span>
+          {/if}
+        </label>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2">
         <label class="grid gap-1.5">
           <span class="text-sm font-medium text-slate-700">Category</span>
           <select
             name="categoryId"
-            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-            value={selected?.categoryId || ""}
+            class="h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            bind:value={formCategoryId}
             required
           >
-            <option value="" disabled>Select category</option>
-            {#each data.categories as category}
+            <option value="" disabled>
+              {filteredCategories.length > 0 ? `Select ${formType} category` : `No ${formType} categories`}
+            </option>
+            {#each filteredCategories as category}
               <option value={category.id}>{category.name}</option>
             {/each}
           </select>
@@ -146,16 +191,7 @@
             <span class="text-xs text-red-600">{fieldErrors.categoryId}</span>
           {/if}
         </label>
-      </div>
 
-      <div class="grid gap-3 sm:grid-cols-2">
-        <label class="grid gap-1.5">
-          <span class="text-sm font-medium text-slate-700">Type</span>
-          <select name="type" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" value={selected?.type || "expense"}>
-            <option value="expense">Expense</option>
-            <option value="income">Income</option>
-          </select>
-        </label>
         <label class="grid gap-1.5">
           <span class="text-sm font-medium text-slate-700">Amount</span>
           <input

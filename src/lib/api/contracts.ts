@@ -37,11 +37,19 @@ export const userSchema = z
 export const accountSchema = z
   .object({
     id: idSchema,
-    name: z.string().min(1),
-    type: z.string().min(1),
-    currency: z.string().min(1),
-    balance: z.coerce.number(),
-    institution: z.string().optional(),
+    name: z.string().min(1).optional(),
+    accountName: z.string().min(1).optional(),
+    account_name: z.string().min(1).optional(),
+    type: z.string().min(1).optional(),
+    accountType: z.string().min(1).optional(),
+    account_type: z.string().min(1).optional(),
+    currency: z.string().min(1).optional(),
+    currencyCode: z.string().min(1).optional(),
+    currency_code: z.string().min(1).optional(),
+    balance: z.union([z.number(), z.string(), z.null(), z.undefined()]).optional(),
+    institution: z.string().nullable().optional(),
+    institutionName: z.string().nullable().optional(),
+    institution_name: z.string().nullable().optional(),
     createdAt: z.string().optional(),
     created_at: z.string().optional(),
     updatedAt: z.string().optional(),
@@ -49,14 +57,28 @@ export const accountSchema = z
   })
   .transform((account) => ({
     id: String(account.id),
-    name: account.name,
-    type: account.type,
-    currency: account.currency,
-    balance: account.balance,
-    institution: account.institution,
+    name: account.name ?? account.accountName ?? account.account_name ?? "Untitled account",
+    type: account.type ?? account.accountType ?? account.account_type ?? "other",
+    currency: (account.currency ?? account.currencyCode ?? account.currency_code ?? "USD").toUpperCase(),
+    balance: Number.isFinite(Number(account.balance)) ? Number(account.balance) : 0,
+    institution: account.institution ?? account.institutionName ?? account.institution_name ?? undefined,
     createdAt: account.createdAt ?? account.created_at,
     updatedAt: account.updatedAt ?? account.updated_at
   }));
+
+export const accountListSchema = z
+  .union([
+    z.array(accountSchema),
+    z.object({ accounts: z.array(accountSchema) }),
+    z.object({ items: z.array(accountSchema) }),
+    z.object({ rows: z.array(accountSchema) })
+  ])
+  .transform((value) => {
+    if (Array.isArray(value)) return value;
+    if ("accounts" in value) return value.accounts;
+    if ("items" in value) return value.items;
+    return value.rows;
+  });
 
 export const categorySchema = z
   .object({

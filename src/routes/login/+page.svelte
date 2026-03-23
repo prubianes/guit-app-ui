@@ -4,6 +4,7 @@
   import type { PageData } from "./$types";
   import Button from "$lib/components/Button.svelte";
   import FormField from "$lib/components/FormField.svelte";
+  import ThemeToggle from "$lib/components/ThemeToggle.svelte";
   import { toasts } from "$lib/components/toastStore";
 
   let { data, form }: { data: PageData; form: Record<string, unknown> | null } = $props();
@@ -11,6 +12,7 @@
 </script>
 
 <main class="mx-auto grid min-h-screen w-full max-w-5xl place-items-center px-4 py-10">
+  <ThemeToggle class="fixed right-4 top-4 z-20" />
   <section class="grid w-full gap-6 rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-[var(--shadow)] lg:grid-cols-[1.1fr_0.9fr]">
     <div class="grid content-end gap-4 rounded-[2rem] border border-slate-200 bg-white p-6">
       <p class="text-xs uppercase tracking-[0.22em] text-slate-500">The New More</p>
@@ -28,7 +30,7 @@
           Active session detected. You can continue to dashboard.
         </div>
         <div class="mt-3">
-          <Button on:click={() => goto("/")}>Go to dashboard</Button>
+          <a href="/"><Button>Go to dashboard</Button></a>
         </div>
       {/if}
 
@@ -43,9 +45,9 @@
         method="POST"
         use:enhance={() => {
           return async ({ result, update }) => {
-            if (result.type === "success") {
+            if (result.type === "redirect") {
               toasts.success("Welcome back.");
-              await goto("/");
+              await goto(result.location);
               return;
             }
             if (result.type === "failure") {

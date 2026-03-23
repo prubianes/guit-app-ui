@@ -8,9 +8,27 @@ import {
   missingIdFailure
 } from "$lib/utils/actionResponses";
 
+const accountTypeOptions = [
+  "checking",
+  "savings",
+  "cash",
+  "credit_card",
+  "investment",
+  "loan",
+  "other"
+] as const;
+
+const parseOptionalString = (value: FormDataEntryValue | null) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
 const accountSchema = z.object({
   name: z.string().min(1, "Account name is required."),
-  type: z.string().min(1, "Account type is required."),
+  type: z.enum(accountTypeOptions, {
+    errorMap: () => ({ message: "Please select a valid account type." })
+  }),
   currency: z.string().length(3, "Use a 3-letter currency code."),
   balance: z.coerce.number(),
   institution: z.string().optional()
@@ -36,7 +54,7 @@ export const actions: Actions = {
       type: formData.get("type"),
       currency: String(formData.get("currency") ?? "").toUpperCase(),
       balance: formData.get("balance"),
-      institution: String(formData.get("institution") ?? "")
+      institution: parseOptionalString(formData.get("institution"))
     });
 
     if (!parsed.success) {
@@ -59,7 +77,7 @@ export const actions: Actions = {
       type: formData.get("type"),
       currency: String(formData.get("currency") ?? "").toUpperCase(),
       balance: formData.get("balance"),
-      institution: String(formData.get("institution") ?? "")
+      institution: parseOptionalString(formData.get("institution"))
     });
 
     if (!accountId) {
