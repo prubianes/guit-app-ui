@@ -15,10 +15,75 @@
 
   const columns = [
     { key: "description", label: "Description" },
+    { key: "accountName", label: "Account" },
+    { key: "categoryName", label: "Category" },
     { key: "type", label: "Type" },
     { key: "amount", label: "Amount", type: "currency" as const },
     { key: "date", label: "Date", type: "date" as const }
   ];
+  const formatCurrency = (value: number) => `$${value.toFixed(2)}`;
+  const transactionsWithDetails = $derived(
+    data.transactions.map((transaction) => {
+      const account = data.accounts.find((item) => String(item.id) === String(transaction.accountId));
+      const category = data.categories.find((item) => String(item.id) === String(transaction.categoryId));
+      return {
+        ...transaction,
+        accountName: account?.name ?? `Account #${transaction.accountId}`,
+        categoryName: category?.name ?? `Category #${transaction.categoryId}`
+      };
+    })
+  );
+  const incomeTotal = $derived(
+    data.transactions
+      .filter((transaction) => transaction.type === "income")
+      .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0)
+  );
+  const expenseTotal = $derived(
+    data.transactions
+      .filter((transaction) => transaction.type === "expense")
+      .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0)
+  );
+  const netFlow = $derived(incomeTotal - expenseTotal);
+  const averageAmount = $derived(
+    data.transactions.length > 0
+      ? data.transactions.reduce((sum, transaction) => sum + Math.abs(Number(transaction.amount || 0)), 0) /
+          data.transactions.length
+      : 0
+  );
+  const recentThirtyDayCount = $derived(
+    data.transactions.filter((transaction) => {
+      const raw = transaction.date ?? transaction.occurredAt;
+      const timestamp = raw ? new Date(raw).getTime() : Number.NaN;
+      const threshold = Date.now() - 1000 * 60 * 60 * 24 * 30;
+      return Number.isFinite(timestamp) && timestamp >= threshold;
+    }).length
+  );
+  const topExpense = $derived(
+    [...transactionsWithDetails]
+      .filter((transaction) => transaction.type === "expense")
+      .sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0))[0] ?? null
+  );
+  const categoryExpenseBreakdown = $derived(
+    (() => {
+      const totals = new Map<string, number>();
+      for (const transaction of transactionsWithDetails) {
+        if (transaction.type !== "expense") continue;
+        totals.set(
+          transaction.categoryName,
+          (totals.get(transaction.categoryName) ?? 0) + Number(transaction.amount || 0)
+        );
+      }
+      const rows = Array.from(totals.entries())
+        .map(([category, total]) => ({ category, total }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+      const max = rows.reduce((value, row) => Math.max(value, row.total), 0) || 1;
+      return rows.map((row) => ({
+        ...row,
+        percent: Math.max(10, Math.round((row.total / max) * 100))
+      }));
+    })()
+  );
 
   let modalOpen = $state(false);
   let confirmOpen = $state(false);
@@ -93,7 +158,68 @@
   {:else if data.transactions.length === 0}
     <StateMessage title="No transactions yet" message="Create your first transaction entry." />
   {:else}
-    <DataTable columns={columns} rows={data.transactions}>
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Net flow</p>
+        <p class={`mt-2 text-2xl font-semibold ${netFlow >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+          {netFlow >= 0 ? "+" : ""}{formatCurrency(netFlow)}
+        </p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Income total</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(incomeTotal)}</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Expense total</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(expenseTotal)}</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Avg transaction</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(averageAmount)}</p>
+      </article>
+    </section>
+
+    <section class="grid gap-4 xl:grid-cols-2">
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 class="text-lg font-semibold text-slate-900">Expense concentration</h2>
+        <p class="mt-1 text-sm text-slate-600">Top spending categories in your current dataset.</p>
+        <div class="mt-4 space-y-3">
+          {#each categoryExpenseBreakdown as row}
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-sm">
+                <span class="font-medium text-slate-800">{row.category}</span>
+                <span class="text-slate-600">{formatCurrency(row.total)}</span>
+              </div>
+              <div class="h-2 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                <div class="h-full rounded-full" style={`width:${row.percent}%; background: var(--danger);`}></div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </article>
+
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 class="text-lg font-semibold text-slate-900">Activity pulse</h2>
+        <p class="mt-1 text-sm text-slate-600">Recent movement and largest expense marker.</p>
+        <div class="mt-4 space-y-3">
+          <div class="rounded-xl border border-slate-200 px-3 py-2">
+            <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Last 30 days</p>
+            <p class="mt-1 text-lg font-semibold text-slate-900">{recentThirtyDayCount} transactions</p>
+          </div>
+          {#if topExpense}
+            <div class="rounded-xl border border-slate-200 px-3 py-2">
+              <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Largest expense</p>
+              <p class="mt-1 text-sm font-semibold text-slate-900">{topExpense.description || topExpense.categoryName}</p>
+              <p class="text-sm text-slate-600">
+                {formatCurrency(Number(topExpense.amount || 0))} · {topExpense.accountName}
+              </p>
+            </div>
+          {/if}
+        </div>
+      </article>
+    </section>
+
+    <DataTable columns={columns} rows={transactionsWithDetails}>
       {#snippet actions(row)}
         <div class="inline-flex gap-2">
           <Button variant="ghost" class="!px-2 !py-1 text-xs" on:click={() => openEdit(row as Transaction)}>Edit</Button>

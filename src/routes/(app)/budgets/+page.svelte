@@ -14,10 +14,50 @@
   const fieldErrors = $derived((form?.fieldErrors || {}) as Record<string, string>);
 
   const columns = [
-    { key: "categoryId", label: "Category" },
+    { key: "categoryName", label: "Category" },
     { key: "period", label: "Period" },
     { key: "amount", label: "Amount", type: "currency" as const }
   ];
+  const formatCurrency = (value: number) => `$${value.toFixed(2)}`;
+  const budgetsWithCategory = $derived(
+    data.budgets.map((budget) => {
+      const category = data.categories.find((item) => String(item.id) === String(budget.categoryId));
+      return {
+        ...budget,
+        categoryName: category?.name ?? `Category #${budget.categoryId}`
+      };
+    })
+  );
+  const totalBudget = $derived(
+    data.budgets.reduce((sum, budget) => sum + Number(budget.amount || 0), 0)
+  );
+  const averageBudget = $derived(
+    data.budgets.length > 0 ? totalBudget / data.budgets.length : 0
+  );
+  const topBudget = $derived(
+    [...budgetsWithCategory].sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0))[0] ?? null
+  );
+  const coveredCategories = $derived(
+    new Set(data.budgets.map((budget) => String(budget.categoryId))).size
+  );
+  const periodBreakdown = $derived(
+    (() => {
+      const rows = [
+        { period: "weekly", label: "Weekly", count: 0 },
+        { period: "monthly", label: "Monthly", count: 0 },
+        { period: "yearly", label: "Yearly", count: 0 }
+      ];
+      for (const budget of data.budgets) {
+        const row = rows.find((item) => item.period === budget.period);
+        if (row) row.count += 1;
+      }
+      const maxCount = Math.max(...rows.map((row) => row.count), 1);
+      return rows.map((row) => ({
+        ...row,
+        percent: row.count === 0 ? 8 : Math.round((row.count / maxCount) * 100)
+      }));
+    })()
+  );
 
   let modalOpen = $state(false);
   let confirmOpen = $state(false);
@@ -66,7 +106,59 @@
   {:else if data.budgets.length === 0}
     <StateMessage title="No budgets yet" message="Create a budget to monitor category spending limits." />
   {:else}
-    <DataTable columns={columns} rows={data.budgets}>
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Total budgeted</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(totalBudget)}</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Budget entries</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900">{data.budgets.length}</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Avg budget amount</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(averageBudget)}</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Category coverage</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900">{coveredCategories}/{data.categories.length}</p>
+      </article>
+    </section>
+
+    <section class="grid gap-4 xl:grid-cols-2">
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 class="text-lg font-semibold text-slate-900">Budget cadence mix</h2>
+        <p class="mt-1 text-sm text-slate-600">How your budgets are distributed across periods.</p>
+        <div class="mt-4 space-y-3">
+          {#each periodBreakdown as row}
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-sm">
+                <span class="font-medium text-slate-800">{row.label}</span>
+                <span class="text-slate-600">{row.count}</span>
+              </div>
+              <div class="h-2 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                <div class="h-full rounded-full" style={`width:${row.percent}%; background: var(--accent);`}></div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </article>
+
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 class="text-lg font-semibold text-slate-900">Largest allocation</h2>
+        <p class="mt-1 text-sm text-slate-600">Your biggest budgeted category at a glance.</p>
+        {#if topBudget}
+          <div class="mt-4 rounded-xl border border-slate-200 p-4">
+            <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Top category</p>
+            <p class="mt-1 text-base font-semibold text-slate-900">{topBudget.categoryName}</p>
+            <p class="mt-1 text-2xl font-semibold text-slate-900">{formatCurrency(Number(topBudget.amount || 0))}</p>
+            <p class="text-xs text-slate-600">Period: {topBudget.period}</p>
+          </div>
+        {/if}
+      </article>
+    </section>
+
+    <DataTable columns={columns} rows={budgetsWithCategory}>
       {#snippet actions(row)}
         <div class="inline-flex gap-2">
           <Button variant="ghost" class="!px-2 !py-1 text-xs" on:click={() => openEdit(row as Budget)}>Edit</Button>
@@ -112,7 +204,7 @@
         <span class="text-sm font-medium text-slate-700">Category</span>
         <select
           name="categoryId"
-          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          class="h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
           value={selected?.categoryId || ""}
           required
         >
@@ -144,7 +236,7 @@
           <span class="text-sm font-medium text-slate-700">Period</span>
           <select
             name="period"
-            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            class="h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
             value={selected?.period || "monthly"}
           >
             <option value="weekly">Weekly</option>

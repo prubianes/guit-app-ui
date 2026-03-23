@@ -8,8 +8,14 @@ import {
   missingIdFailure
 } from "$lib/utils/actionResponses";
 
+const toOptionalDate = (value: FormDataEntryValue | null) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
 const budgetSchema = z.object({
-  categoryId: z.string().min(1, "Category is required."),
+  categoryId: z.coerce.number({ invalid_type_error: "Category is required." }),
   amount: z.coerce.number().positive("Budget amount must be positive."),
   period: z.enum(["weekly", "monthly", "yearly"]),
   startDate: z.string().optional(),
@@ -44,8 +50,8 @@ export const actions: Actions = {
       categoryId: formData.get("categoryId"),
       amount: formData.get("amount"),
       period: formData.get("period"),
-      startDate: formData.get("startDate"),
-      endDate: formData.get("endDate")
+      startDate: toOptionalDate(formData.get("startDate")),
+      endDate: toOptionalDate(formData.get("endDate"))
     });
 
     if (!parsed.success) {
@@ -68,8 +74,8 @@ export const actions: Actions = {
       categoryId: formData.get("categoryId"),
       amount: formData.get("amount"),
       period: formData.get("period"),
-      startDate: formData.get("startDate"),
-      endDate: formData.get("endDate")
+      startDate: toOptionalDate(formData.get("startDate")),
+      endDate: toOptionalDate(formData.get("endDate"))
     });
 
     if (!parsed.success) {

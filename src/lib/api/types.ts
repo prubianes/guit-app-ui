@@ -103,7 +103,7 @@ export type CreateTransactionInput = {
 export type UpdateTransactionInput = Partial<CreateTransactionInput>;
 
 export type CreateBudgetInput = {
-  categoryId: string;
+  categoryId: string | number;
   amount: number;
   period: "monthly" | "weekly" | "yearly";
   startDate?: string;
