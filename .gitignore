@@ -1,0 +1,51 @@
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# SvelteKit
+node_modules/
+.svelte-kit/
+build/
+dist/
+coverage/
+playwright-report/
+test-results/
+vite.config.ts.timestamp-*.mjs
+*.local
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temp prototypes
+temp/
+
+# pnpm
+.pnpm-store/
+.pnpm-debug.log*
+pnpm-lock.yaml
+
+# Claude
+.claude/
+claude/
+claude.local/
+claude-project/
+
+# Codex
+.codex/
+codex/
+codex.local/
+codex-project/
+
+# Copilot
+.copilot/
+copilot/
+copilot.local/
+.github/copilot/

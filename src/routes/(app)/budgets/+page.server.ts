@@ -1,0 +1,104 @@
+import type { Actions, PageServerLoad } from "./$types";
+import { z } from "zod";
+import { errorToActionFail } from "$lib/utils/actionErrors";
+import {
+  actionFailure,
+  actionSuccess,
+  actionValidationFail,
+  missingIdFailure
+} from "$lib/utils/actionResponses";
+
+const toOptionalDate = (value: FormDataEntryValue | null) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const budgetSchema = z.object({
+  categoryId: z.coerce.number({ invalid_type_error: "Category is required." }),
+  amount: z.coerce.number().positive("Budget amount must be positive."),
+  period: z.enum(["weekly", "monthly", "yearly"]),
+  startDate: z.string().optional(),
+  endDate: z.string().optional()
+});
+
+export const load: PageServerLoad = async ({ locals }) => {
+  try {
+    const [budgets, categories] = await Promise.all([
+      locals.api.budgetsList(),
+      locals.api.categoriesList()
+    ]);
+
+    return {
+      budgets,
+      categories,
+      loadError: null
+    };
+  } catch (error) {
+    return {
+      budgets: [],
+      categories: [],
+      loadError: error instanceof Error ? error.message : "Failed to load budgets."
+    };
+  }
+};
+
+export const actions: Actions = {
+  create: async ({ request, locals }) => {
+    const formData = await request.formData();
+    const parsed = budgetSchema.safeParse({
+      categoryId: formData.get("categoryId"),
+      amount: formData.get("amount"),
+      period: formData.get("period"),
+      startDate: toOptionalDate(formData.get("startDate")),
+      endDate: toOptionalDate(formData.get("endDate"))
+    });
+
+    if (!parsed.success) {
+      return actionValidationFail(parsed.error.format());
+    }
+
+    try {
+      await locals.api.budgetCreate(parsed.data);
+      return actionSuccess("Budget created.");
+    } catch (error) {
+      return actionFailure(errorToActionFail(error));
+    }
+  },
+  update: async ({ request, locals }) => {
+    const formData = await request.formData();
+    const budgetId = String(formData.get("budgetId") || "");
+    if (!budgetId) return missingIdFailure("Missing budget id.");
+
+    const parsed = budgetSchema.safeParse({
+      categoryId: formData.get("categoryId"),
+      amount: formData.get("amount"),
+      period: formData.get("period"),
+      startDate: toOptionalDate(formData.get("startDate")),
+      endDate: toOptionalDate(formData.get("endDate"))
+    });
+
+    if (!parsed.success) {
+      return actionValidationFail(parsed.error.format());
+    }
+
+    try {
+      await locals.api.budgetUpdate(budgetId, parsed.data);
+      return actionSuccess("Budget updated.");
+    } catch (error) {
+      return actionFailure(errorToActionFail(error));
+    }
+  },
+  delete: async ({ request, locals }) => {
+    const formData = await request.formData();
+    const budgetId = String(formData.get("budgetId") || "");
+    if (!budgetId) return missingIdFailure("Missing budget id.");
+
+    try {
+      await locals.api.budgetDelete(budgetId);
+      return actionSuccess("Budget deleted.");
+    } catch (error) {
+      return actionFailure(errorToActionFail(error));
+    }
+  }
+};
