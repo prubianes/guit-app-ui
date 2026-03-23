@@ -10,7 +10,6 @@ import {
 
 const categorySchema = z.object({
   name: z.string().min(1, "Category name is required."),
-  color: z.string().optional(),
   kind: z.enum(["income", "expense"])
 });
 
@@ -31,7 +30,6 @@ export const actions: Actions = {
     const formData = await request.formData();
     const parsed = categorySchema.safeParse({
       name: formData.get("name"),
-      color: formData.get("color"),
       kind: formData.get("kind")
     });
 
@@ -52,7 +50,6 @@ export const actions: Actions = {
 
     const parsed = categorySchema.safeParse({
       name: formData.get("name"),
-      color: formData.get("color"),
       kind: formData.get("kind")
     });
 

@@ -85,7 +85,6 @@ export type UpdateAccountInput = Partial<CreateAccountInput>;
 
 export type CreateCategoryInput = {
   name: string;
-  color?: string;
   kind?: "income" | "expense";
 };
 

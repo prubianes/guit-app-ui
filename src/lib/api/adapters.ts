@@ -31,7 +31,6 @@ export const adaptCategoryInput = (input: CreateCategoryInput | UpdateCategoryIn
   const normalizedType = input.kind ?? "expense";
   return {
     name: input.name,
-    color: input.color ?? "#64748b",
     type: normalizedType,
     kind: normalizedType
   };

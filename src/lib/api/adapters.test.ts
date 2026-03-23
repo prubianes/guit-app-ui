@@ -14,7 +14,6 @@ describe("api adapters", () => {
   it("adapts category payload with compatible type/kind fields", () => {
     expect(adaptCategoryInput({ name: "Food", kind: "expense" })).toEqual({
       name: "Food",
-      color: "#64748b",
       type: "expense",
       kind: "expense"
     });

@@ -29,12 +29,55 @@
     { value: "loan", label: "Loan" },
     { value: "other", label: "Other" }
   ];
+  const typeLabel = (value: string) =>
+    accountTypeOptions.find((option) => option.value === value)?.label ?? value;
+  const formatCurrency = (value: number, currency = "USD") => {
+    try {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
+    } catch {
+      return `$${value.toFixed(2)}`;
+    }
+  };
 
   let modalOpen = $state(false);
   let confirmOpen = $state(false);
   let selected: Account | null = $state(null);
   let submitting = $state(false);
   let deleting = $state(false);
+
+  const totalBalance = $derived(data.accounts.reduce((sum, account) => sum + Number(account.balance || 0), 0));
+  const positiveAccounts = $derived(data.accounts.filter((account) => Number(account.balance) >= 0).length);
+  const debtAccounts = $derived(data.accounts.filter((account) => Number(account.balance) < 0).length);
+  const largestAccount = $derived(
+    [...data.accounts].sort((a, b) => Number(b.balance || 0) - Number(a.balance || 0))[0] ?? null
+  );
+  const balancesByType = $derived(
+    (() => {
+      const totals = new Map<string, number>();
+      for (const account of data.accounts) {
+        totals.set(account.type, (totals.get(account.type) ?? 0) + Number(account.balance || 0));
+      }
+      const rows = Array.from(totals.entries()).map(([type, total]) => ({ type, total }));
+      const maxAbs = rows.reduce((max, row) => Math.max(max, Math.abs(row.total)), 0) || 1;
+      return rows
+        .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
+        .map((row) => ({
+          ...row,
+          percent: Math.max(6, Math.round((Math.abs(row.total) / maxAbs) * 100))
+        }));
+    })()
+  );
+  const totalsByCurrency = $derived(
+    (() => {
+      const totals = new Map<string, number>();
+      for (const account of data.accounts) {
+        totals.set(account.currency, (totals.get(account.currency) ?? 0) + Number(account.balance || 0));
+      }
+      return Array.from(totals.entries())
+        .map(([currency, total]) => ({ currency, total }))
+        .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+    })()
+  );
 
   const openCreate = () => {
     selected = null;
@@ -78,6 +121,76 @@
   {:else if data.accounts.length === 0}
     <StateMessage title="No accounts yet" message="Create your first account to start tracking balances." />
   {:else}
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Total balance</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(totalBalance)}</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Accounts tracked</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900">{data.accounts.length}</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Positive accounts</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900">{positiveAccounts}</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Debt accounts</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900">{debtAccounts}</p>
+      </article>
+    </section>
+
+    <section class="grid gap-4 xl:grid-cols-2">
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 class="text-lg font-semibold text-slate-900">Balance by type</h2>
+        <p class="mt-1 text-sm text-slate-600">Quick visual split of where your money sits.</p>
+        <div class="mt-4 space-y-3">
+          {#each balancesByType as bucket}
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-sm">
+                <span class="font-medium text-slate-800">{typeLabel(bucket.type)}</span>
+                <span class={bucket.total >= 0 ? "text-slate-700" : "text-red-700"}>
+                  {formatCurrency(bucket.total)}
+                </span>
+              </div>
+              <div class="h-2 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                <div
+                  class="h-full rounded-full"
+                  style={`width: ${bucket.percent}%; background: ${bucket.total >= 0 ? "var(--success)" : "var(--danger)"};`}
+                ></div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </article>
+
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 class="text-lg font-semibold text-slate-900">Distribution</h2>
+        <p class="mt-1 text-sm text-slate-600">Balance grouped by currency and largest account.</p>
+        <div class="mt-4 space-y-3">
+          {#if largestAccount}
+            <div class="rounded-xl border border-slate-200 p-3">
+              <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Largest account</p>
+              <p class="mt-1 text-sm font-semibold text-slate-900">{largestAccount.name}</p>
+              <p class="text-sm text-slate-600">
+                {formatCurrency(Number(largestAccount.balance || 0), largestAccount.currency)}
+              </p>
+            </div>
+          {/if}
+          <div class="grid gap-2">
+            {#each totalsByCurrency as item}
+              <div class="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <span class="font-medium text-slate-800">{item.currency}</span>
+                <span class={item.total >= 0 ? "text-slate-700" : "text-red-700"}>
+                  {formatCurrency(item.total, item.currency)}
+                </span>
+              </div>
+            {/each}
+          </div>
+        </div>
+      </article>
+    </section>
+
     <DataTable columns={columns} rows={data.accounts}>
       {#snippet actions(row)}
         <div class="inline-flex gap-2">
