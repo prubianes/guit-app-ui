@@ -3,6 +3,7 @@ import type { Actions } from "./$types";
 import { z } from "zod";
 import { setAuthCookies } from "$lib/auth/cookies";
 import { errorToActionFail, flattenZodErrors } from "$lib/utils/actionErrors";
+import { log, logFunnelEvent } from "$lib/utils/logger";
 
 const registerSchema = z
   .object({
@@ -14,7 +15,8 @@ const registerSchema = z
   .strict();
 
 export const actions: Actions = {
-  default: async ({ request, locals, cookies }) => {
+  default: async ({ request, locals, cookies, url }) => {
+    const pathname = url?.pathname ?? "/register";
     const formData = await request.formData();
     const parsed = registerSchema.safeParse({
       email: formData.get("email"),
@@ -45,12 +47,39 @@ export const actions: Actions = {
         accessToken: auth.accessToken,
         refreshToken: auth.refreshToken
       });
+      log("info", "auth.register_success", {
+        requestId: locals.requestId,
+        route: "/register",
+        pathname,
+        email: parsed.data.email
+      });
+      logFunnelEvent("auth_register_success", {
+        requestId: locals.requestId,
+        route: "/register",
+        pathname,
+        email: parsed.data.email
+      });
       throw redirect(303, "/");
     } catch (error) {
       if (isRedirect(error)) {
         throw error;
       }
-      return fail(400, errorToActionFail(error));
+      const actionFail = errorToActionFail(error);
+      log("warn", "auth.register_failure", {
+        requestId: locals.requestId,
+        route: "/register",
+        pathname,
+        email: parsed.data.email,
+        code: actionFail.code
+      });
+      logFunnelEvent("auth_register_failure", {
+        requestId: locals.requestId,
+        route: "/register",
+        pathname: url.pathname,
+        email: parsed.data.email,
+        code: actionFail.code
+      });
+      return fail(400, actionFail);
     }
   }
 };

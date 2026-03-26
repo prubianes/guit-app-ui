@@ -7,6 +7,7 @@ import {
   actionValidationFail,
   missingIdFailure
 } from "$lib/utils/actionResponses";
+import { logFunnelEvent } from "$lib/utils/logger";
 
 const toOptionalDate = (value: FormDataEntryValue | null) => {
   if (typeof value !== "string") return undefined;
@@ -44,7 +45,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-  create: async ({ request, locals }) => {
+  create: async ({ request, locals, url }) => {
+    const pathname = url?.pathname ?? "/budgets";
     const formData = await request.formData();
     const parsed = budgetSchema.safeParse({
       categoryId: formData.get("categoryId"),
@@ -59,10 +61,23 @@ export const actions: Actions = {
     }
 
     try {
-      await locals.api.budgetCreate(parsed.data);
+      const created = await locals.api.budgetCreate(parsed.data);
+      logFunnelEvent("budget_create_success", {
+        requestId: locals.requestId,
+        route: "/(app)/budgets",
+        pathname,
+        resourceId: created.id
+      });
       return actionSuccess("Budget created.");
     } catch (error) {
-      return actionFailure(errorToActionFail(error));
+      const actionFail = errorToActionFail(error);
+      logFunnelEvent("budget_create_failure", {
+        requestId: locals.requestId,
+        route: "/(app)/budgets",
+        pathname,
+        code: actionFail.code
+      });
+      return actionFailure(actionFail);
     }
   },
   update: async ({ request, locals }) => {

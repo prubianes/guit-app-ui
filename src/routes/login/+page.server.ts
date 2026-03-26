@@ -3,6 +3,7 @@ import type { Actions, PageServerLoad } from "./$types";
 import { z } from "zod";
 import { setAuthCookies } from "$lib/auth/cookies";
 import { errorToActionFail, flattenZodErrors } from "$lib/utils/actionErrors";
+import { log, logFunnelEvent } from "$lib/utils/logger";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -29,7 +30,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-  default: async ({ request, locals, cookies }) => {
+  default: async ({ request, locals, cookies, url }) => {
+    const pathname = url?.pathname ?? "/login";
     const formData = await request.formData();
     const parsed = loginSchema.safeParse({
       email: formData.get("email"),
@@ -49,12 +51,39 @@ export const actions: Actions = {
         accessToken: auth.accessToken,
         refreshToken: auth.refreshToken
       });
+      log("info", "auth.login_success", {
+        requestId: locals.requestId,
+        route: "/login",
+        pathname,
+        email: parsed.data.email
+      });
+      logFunnelEvent("auth_login_success", {
+        requestId: locals.requestId,
+        route: "/login",
+        pathname,
+        email: parsed.data.email
+      });
       throw redirect(303, "/");
     } catch (error) {
       if (isRedirect(error)) {
         throw error;
       }
-      return fail(400, errorToActionFail(error));
+      const actionFail = errorToActionFail(error);
+      log("warn", "auth.login_failure", {
+        requestId: locals.requestId,
+        route: "/login",
+        pathname,
+        email: parsed.data.email,
+        code: actionFail.code
+      });
+      logFunnelEvent("auth_login_failure", {
+        requestId: locals.requestId,
+        route: "/login",
+        pathname: url.pathname,
+        email: parsed.data.email,
+        code: actionFail.code
+      });
+      return fail(400, actionFail);
     }
   }
 };

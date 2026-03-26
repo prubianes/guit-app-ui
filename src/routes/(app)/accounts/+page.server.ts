@@ -7,6 +7,7 @@ import {
   actionValidationFail,
   missingIdFailure
 } from "$lib/utils/actionResponses";
+import { logFunnelEvent } from "$lib/utils/logger";
 
 const accountTypeOptions = [
   "checking",
@@ -47,7 +48,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-  create: async ({ request, locals }) => {
+  create: async ({ request, locals, url }) => {
+    const pathname = url?.pathname ?? "/accounts";
     const formData = await request.formData();
     const parsed = accountSchema.safeParse({
       name: formData.get("name"),
@@ -62,10 +64,23 @@ export const actions: Actions = {
     }
 
     try {
-      await locals.api.accountCreate(parsed.data);
+      const created = await locals.api.accountCreate(parsed.data);
+      logFunnelEvent("account_create_success", {
+        requestId: locals.requestId,
+        route: "/(app)/accounts",
+        pathname,
+        resourceId: created.id
+      });
       return actionSuccess("Account created.");
     } catch (error) {
-      return actionFailure(errorToActionFail(error));
+      const actionFail = errorToActionFail(error);
+      logFunnelEvent("account_create_failure", {
+        requestId: locals.requestId,
+        route: "/(app)/accounts",
+        pathname,
+        code: actionFail.code
+      });
+      return actionFailure(actionFail);
     }
   },
   update: async ({ request, locals }) => {
