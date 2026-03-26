@@ -22,10 +22,13 @@ import {
   accountSchema,
   accountListSchema,
   authPayloadSchema,
+  budgetListSchema,
   budgetSchema,
+  categoryListSchema,
   categorySchema,
   parseErrorEnvelope,
   parseSuccessData,
+  transactionListSchema,
   transactionSchema,
   userSchema
 } from "$lib/api/contracts";
@@ -262,7 +265,7 @@ export class ServerApiClient {
   categoriesList() {
     return this.request<Category[]>("/me/categories", undefined, {
       auth: true,
-      responseSchema: z.array(categorySchema)
+      responseSchema: categoryListSchema
     });
   }
 
@@ -296,7 +299,7 @@ export class ServerApiClient {
   transactionsList() {
     return this.request<Transaction[]>("/me/transactions", undefined, {
       auth: true,
-      responseSchema: z.array(transactionSchema)
+      responseSchema: transactionListSchema
     });
   }
 
@@ -330,7 +333,7 @@ export class ServerApiClient {
   budgetsList() {
     return this.request<Budget[]>("/me/budgets", undefined, {
       auth: true,
-      responseSchema: z.array(budgetSchema)
+      responseSchema: budgetListSchema
     });
   }
 

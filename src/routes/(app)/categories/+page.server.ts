@@ -7,6 +7,7 @@ import {
   actionValidationFail,
   missingIdFailure
 } from "$lib/utils/actionResponses";
+import { logFunnelEvent } from "$lib/utils/logger";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Category name is required."),
@@ -26,7 +27,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-  create: async ({ request, locals }) => {
+  create: async ({ request, locals, url }) => {
+    const pathname = url?.pathname ?? "/categories";
     const formData = await request.formData();
     const parsed = categorySchema.safeParse({
       name: formData.get("name"),
@@ -38,10 +40,23 @@ export const actions: Actions = {
     }
 
     try {
-      await locals.api.categoryCreate(parsed.data);
+      const created = await locals.api.categoryCreate(parsed.data);
+      logFunnelEvent("category_create_success", {
+        requestId: locals.requestId,
+        route: "/(app)/categories",
+        pathname,
+        resourceId: created.id
+      });
       return actionSuccess("Category created.");
     } catch (error) {
-      return actionFailure(errorToActionFail(error));
+      const actionFail = errorToActionFail(error);
+      logFunnelEvent("category_create_failure", {
+        requestId: locals.requestId,
+        route: "/(app)/categories",
+        pathname,
+        code: actionFail.code
+      });
+      return actionFailure(actionFail);
     }
   },
   update: async ({ request, locals }) => {

@@ -1,6 +1,11 @@
 type LogLevel = "info" | "warn" | "error";
 
 type LogPayload = Record<string, unknown>;
+const RELEASE =
+  process.env.PUBLIC_APP_RELEASE ||
+  process.env.APP_RELEASE ||
+  process.env.GITHUB_SHA?.slice(0, 12) ||
+  "dev";
 
 const REDACT_KEYS = new Set([
   "password",
@@ -36,6 +41,7 @@ export const log = (level: LogLevel, event: string, payload: LogPayload = {}) =>
   const safePayload = redact(payload);
   const structured = {
     ts: new Date().toISOString(),
+    release: RELEASE,
     level,
     event,
     ...(isObject(safePayload) ? safePayload : {})
@@ -64,4 +70,19 @@ export const logApiError = (payload: {
   details?: unknown;
 }) => {
   log("error", "api.error", payload);
+};
+
+export const logFunnelEvent = (
+  name: string,
+  payload: {
+    requestId?: string;
+    route?: string;
+    pathname?: string;
+    userId?: string;
+    email?: string;
+    code?: string;
+    resourceId?: string;
+  } = {}
+) => {
+  log("info", "product.funnel", { name, ...payload });
 };

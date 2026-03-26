@@ -74,8 +74,10 @@ This runs Playwright smoke tests for auth guard + 404 behavior.
 ### Structured logging
 
 - API failures are logged as structured JSON events (`api.error`).
+- Logs include a `release` field (`PUBLIC_APP_RELEASE`/`APP_RELEASE`/CI SHA fallback).
 - Logs include request context (`requestId`, route, endpoint, method, status, code).
 - Sensitive fields are redacted by key before logging (password/token/cookie/authorization family keys).
+- Product funnel milestones are logged as `product.funnel` for auth and create flows.
 
 ### Common backend contract failures
 

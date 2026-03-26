@@ -7,6 +7,7 @@ import {
   actionValidationFail,
   missingIdFailure
 } from "$lib/utils/actionResponses";
+import { logFunnelEvent } from "$lib/utils/logger";
 
 const transactionSchema = z.object({
   accountId: z.coerce.number({ invalid_type_error: "Account is required." }),
@@ -41,7 +42,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-  create: async ({ request, locals }) => {
+  create: async ({ request, locals, url }) => {
+    const pathname = url?.pathname ?? "/transactions";
     const formData = await request.formData();
     const parsed = transactionSchema.safeParse({
       accountId: formData.get("accountId"),
@@ -57,10 +59,23 @@ export const actions: Actions = {
     }
 
     try {
-      await locals.api.transactionCreate(parsed.data);
+      const created = await locals.api.transactionCreate(parsed.data);
+      logFunnelEvent("transaction_create_success", {
+        requestId: locals.requestId,
+        route: "/(app)/transactions",
+        pathname,
+        resourceId: created.id
+      });
       return actionSuccess("Transaction created.");
     } catch (error) {
-      return actionFailure(errorToActionFail(error));
+      const actionFail = errorToActionFail(error);
+      logFunnelEvent("transaction_create_failure", {
+        requestId: locals.requestId,
+        route: "/(app)/transactions",
+        pathname,
+        code: actionFail.code
+      });
+      return actionFailure(actionFail);
     }
   },
   update: async ({ request, locals }) => {

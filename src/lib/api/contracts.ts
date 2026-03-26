@@ -96,10 +96,24 @@ export const categorySchema = z
     id: String(category.id),
     name: category.name,
     color: category.color,
-    kind: category.kind ?? category.type,
+    kind: category.kind ?? category.type ?? "expense",
     createdAt: category.createdAt ?? category.created_at,
     updatedAt: category.updatedAt ?? category.updated_at
   }));
+
+export const categoryListSchema = z
+  .union([
+    z.array(categorySchema),
+    z.object({ categories: z.array(categorySchema) }),
+    z.object({ items: z.array(categorySchema) }),
+    z.object({ rows: z.array(categorySchema) })
+  ])
+  .transform((value) => {
+    if (Array.isArray(value)) return value;
+    if ("categories" in value) return value.categories;
+    if ("items" in value) return value.items;
+    return value.rows;
+  });
 
 export const transactionSchema = z
   .object({
@@ -132,6 +146,20 @@ export const transactionSchema = z
     updatedAt: transaction.updatedAt ?? transaction.updated_at
   }));
 
+export const transactionListSchema = z
+  .union([
+    z.array(transactionSchema),
+    z.object({ transactions: z.array(transactionSchema) }),
+    z.object({ items: z.array(transactionSchema) }),
+    z.object({ rows: z.array(transactionSchema) })
+  ])
+  .transform((value) => {
+    if (Array.isArray(value)) return value;
+    if ("transactions" in value) return value.transactions;
+    if ("items" in value) return value.items;
+    return value.rows;
+  });
+
 export const budgetSchema = z
   .object({
     id: idSchema,
@@ -158,6 +186,20 @@ export const budgetSchema = z
     createdAt: budget.createdAt ?? budget.created_at,
     updatedAt: budget.updatedAt ?? budget.updated_at
   }));
+
+export const budgetListSchema = z
+  .union([
+    z.array(budgetSchema),
+    z.object({ budgets: z.array(budgetSchema) }),
+    z.object({ items: z.array(budgetSchema) }),
+    z.object({ rows: z.array(budgetSchema) })
+  ])
+  .transform((value) => {
+    if (Array.isArray(value)) return value;
+    if ("budgets" in value) return value.budgets;
+    if ("items" in value) return value.items;
+    return value.rows;
+  });
 
 const authResponseSchema = z.object({
   accessToken: z.string().optional(),
