@@ -17,10 +17,10 @@
   } = $props();
 
   const variants = {
-    primary: "border border-transparent",
-    secondary: "border",
-    danger: "border border-transparent",
-    ghost: "border bg-transparent"
+    primary: "border border-transparent btn-primary",
+    secondary: "border btn-secondary",
+    danger: "border border-transparent btn-danger",
+    ghost: "border bg-transparent btn-ghost"
   };
 </script>
 
@@ -28,49 +28,56 @@
   {type}
   {disabled}
   onclick={(event) => dispatch("click", event)}
-  class={`inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${variants[
+  class={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${variants[
     variant
-  ]} ${className} btn-${variant}`}
+  ]} ${className}`}
 >
   {@render children?.()}
 </button>
 
 <style>
   .btn-primary {
-    background: var(--text);
-    color: var(--bg);
+    background: var(--text) !important;
+    color: var(--bg) !important;
+    box-shadow: var(--shadow-sm);
   }
 
   .btn-primary:hover {
-    filter: brightness(1.08);
+    transform: translateY(-2px);
   }
 
   .btn-secondary {
-    background: var(--surface-strong);
-    color: var(--text);
-    border-color: var(--line);
+    background: var(--surface-strong) !important;
+    color: var(--text) !important;
+    border-color: var(--line) !important;
   }
 
   .btn-secondary:hover {
-    background: var(--surface);
+    background: var(--surface) !important;
+    transform: translateY(-2px);
   }
 
   .btn-danger {
-    background: var(--danger);
-    color: #fff;
+    background: var(--danger) !important;
+    color: #fff !important;
   }
 
   .btn-danger:hover {
-    filter: brightness(1.08);
+    transform: translateY(-2px);
   }
 
   .btn-ghost {
-    border-color: var(--line);
-    color: var(--text);
-    background: transparent;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+    background: transparent !important;
   }
 
   .btn-ghost:hover {
-    background: var(--surface-strong);
+    background: var(--surface-strong) !important;
+    transform: translateY(-2px);
+  }
+
+  button:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
   }
 </style>

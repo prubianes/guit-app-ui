@@ -23,5 +23,7 @@
 </script>
 
 <div class={className}>
-  <Button variant="ghost" on:click={toggleTheme}>Theme: {theme}</Button>
+  <Button variant="ghost" on:click={toggleTheme}>
+    Theme: {theme === "dark" ? "Dark" : "Light"}
+  </Button>
 </div>

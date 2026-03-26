@@ -26,9 +26,8 @@
     {placeholder}
     value={value}
     {required}
-    class={`w-full rounded-lg border px-3 py-2 text-sm ${
-      error ? "border-red-500" : "border-slate-300"
-    } bg-white`}
+    aria-invalid={Boolean(error)}
+    class="orbit-input text-sm"
   />
   {#if error}
     <span class="text-xs text-red-600">{error}</span>

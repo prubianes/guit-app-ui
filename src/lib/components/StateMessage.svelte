@@ -11,10 +11,11 @@
 </script>
 
 <section
-  class={`rounded-xl border p-6 ${
-    tone === "error" ? "border-red-200 bg-red-50 text-red-800" : "border-slate-200 bg-white text-slate-800"
+  class={`orbit-card p-6 ${
+    tone === "error" ? "border-red-300/60 bg-red-50/70 text-red-900" : "text-slate-800"
   }`}
 >
-  <h3 class="text-base font-semibold">{title}</h3>
+  <p class="orbit-label">{tone === "error" ? "Issue" : "Info"}</p>
+  <h3 class="mt-1 text-lg font-semibold">{title}</h3>
   <p class="mt-1 text-sm opacity-90">{message}</p>
 </section>

@@ -14,17 +14,17 @@
 </script>
 
 {#if open}
-  <div class="fixed inset-0 z-40 bg-black/40" role="presentation" onclick={() => dispatch("close")}></div>
+  <div class="fixed inset-0 z-40 bg-black/45 backdrop-blur-[1px]" role="presentation" onclick={() => dispatch("close")}></div>
   <section
-    class="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-5 shadow-xl"
+    class="fixed left-1/2 top-1/2 z-50 w-[calc(100%-1.5rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 orbit-frame p-5 sm:p-6"
     role="dialog"
     aria-modal="true"
   >
     <header class="mb-4 flex items-center justify-between">
-      <h3 class="text-lg font-semibold text-slate-900">{title}</h3>
+      <h3 class="text-xl font-semibold text-slate-900">{title}</h3>
       <button
         type="button"
-        class="rounded p-2 text-slate-500 hover:bg-slate-100"
+        class="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-100"
         onclick={() => dispatch("close")}
         aria-label="Close"
       >

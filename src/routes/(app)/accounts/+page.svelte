@@ -107,11 +107,11 @@
   };
 </script>
 
-<main class="space-y-4">
-  <section class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-4">
+<main class="space-y-3">
+  <section class="orbit-frame flex flex-wrap items-center justify-between gap-2 p-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-900">Accounts</h1>
-      <p class="text-sm text-slate-600">Manage user-owned financial accounts.</p>
+      <p class="text-sm text-slate-600">Track balances and account mix.</p>
     </div>
     <Button on:click={openCreate}>New account</Button>
   </section>
@@ -122,26 +122,26 @@
     <StateMessage title="No accounts yet" message="Create your first account to start tracking balances." />
   {:else}
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Total balance</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(totalBalance)}</p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Accounts tracked</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{data.accounts.length}</p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Positive accounts</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{positiveAccounts}</p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Debt accounts</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{debtAccounts}</p>
       </article>
     </section>
 
     <section class="grid gap-4 xl:grid-cols-2">
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <h2 class="text-lg font-semibold text-slate-900">Balance by type</h2>
         <p class="mt-1 text-sm text-slate-600">Quick visual split of where your money sits.</p>
         <div class="mt-4 space-y-3">
@@ -164,7 +164,7 @@
         </div>
       </article>
 
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <h2 class="text-lg font-semibold text-slate-900">Distribution</h2>
         <p class="mt-1 text-sm text-slate-600">Balance grouped by currency and largest account.</p>
         <div class="mt-4 space-y-3">
@@ -245,11 +245,10 @@
           <span class="text-sm font-medium text-slate-700">Type</span>
           <select
             name="type"
-            class={`h-[42px] w-full rounded-lg border bg-white px-3 py-2 text-sm ${
-              fieldErrors.type ? "border-red-500" : "border-slate-300"
-            }`}
+            class="orbit-select text-sm"
             required
             value={selected?.type || "checking"}
+            aria-invalid={Boolean(fieldErrors.type)}
           >
             {#if selected}
               {@const selectedType = selected.type}
