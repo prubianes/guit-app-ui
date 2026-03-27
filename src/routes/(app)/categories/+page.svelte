@@ -75,11 +75,11 @@
   };
 </script>
 
-<main class="space-y-4">
-  <section class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-4">
+<main class="space-y-3">
+  <section class="orbit-frame flex flex-wrap items-center justify-between gap-2 p-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-900">Categories</h1>
-      <p class="text-sm text-slate-600">Categories are user-specific and used by transactions and budgets.</p>
+      <p class="text-sm text-slate-600">Organize income and expense groups.</p>
     </div>
     <Button on:click={openCreate}>New category</Button>
   </section>
@@ -90,26 +90,26 @@
     <StateMessage title="No categories yet" message="Create categories before adding transactions or budgets." />
   {:else}
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Total categories</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{data.categories.length}</p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Expense categories</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{expenseCategories}</p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Income categories</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{incomeCategories}</p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Category mix</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{dominantKind}</p>
       </article>
     </section>
 
     <section class="grid gap-4 xl:grid-cols-2">
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <h2 class="text-lg font-semibold text-slate-900">Income vs Expense split</h2>
         <p class="mt-1 text-sm text-slate-600">Ensure both flows are covered for cleaner reporting.</p>
         <div class="mt-4 h-3 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
@@ -124,7 +124,7 @@
         </div>
       </article>
 
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <h2 class="text-lg font-semibold text-slate-900">Naming insights</h2>
         <p class="mt-1 text-sm text-slate-600">Keep category labels concise and easy to scan.</p>
         <div class="mt-4 grid gap-2">
@@ -188,7 +188,8 @@
           name="name"
           required
           value={selected?.name || ""}
-          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          class="orbit-input text-sm"
+          aria-invalid={Boolean(fieldErrors.name)}
         />
         {#if fieldErrors.name}
           <span class="text-xs text-red-600">{fieldErrors.name}</span>
@@ -199,8 +200,9 @@
           <span class="text-sm font-medium text-slate-700">Type</span>
           <select
             name="kind"
-            class="h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            class="orbit-select text-sm"
             value={selected?.kind || "expense"}
+            aria-invalid={Boolean(fieldErrors.kind)}
           >
             <option value="expense">Expense</option>
             <option value="income">Income</option>

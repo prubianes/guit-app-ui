@@ -92,11 +92,11 @@
   };
 </script>
 
-<main class="space-y-4">
-  <section class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-4">
+<main class="space-y-3">
+  <section class="orbit-frame flex flex-wrap items-center justify-between gap-2 p-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-900">Budgets</h1>
-      <p class="text-sm text-slate-600">Budget create/update requires a valid owned category.</p>
+      <p class="text-sm text-slate-600">Set spending limits by category and period.</p>
     </div>
     <Button on:click={openCreate}>New budget</Button>
   </section>
@@ -107,26 +107,26 @@
     <StateMessage title="No budgets yet" message="Create a budget to monitor category spending limits." />
   {:else}
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Total budgeted</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(totalBudget)}</p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Budget entries</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{data.budgets.length}</p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Avg budget amount</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(averageBudget)}</p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Category coverage</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{coveredCategories}/{data.categories.length}</p>
       </article>
     </section>
 
     <section class="grid gap-4 xl:grid-cols-2">
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <h2 class="text-lg font-semibold text-slate-900">Budget cadence mix</h2>
         <p class="mt-1 text-sm text-slate-600">How your budgets are distributed across periods.</p>
         <div class="mt-4 space-y-3">
@@ -144,7 +144,7 @@
         </div>
       </article>
 
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <h2 class="text-lg font-semibold text-slate-900">Largest allocation</h2>
         <p class="mt-1 text-sm text-slate-600">Your biggest budgeted category at a glance.</p>
         {#if topBudget}
@@ -204,8 +204,9 @@
         <span class="text-sm font-medium text-slate-700">Category</span>
         <select
           name="categoryId"
-          class="h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          class="orbit-select text-sm"
           value={selected?.categoryId || ""}
+          aria-invalid={Boolean(fieldErrors.categoryId)}
           required
         >
           <option value="" disabled>Select category</option>
@@ -225,7 +226,8 @@
             type="number"
             step="0.01"
             value={selected?.amount || 0}
-            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            class="orbit-input text-sm"
+            aria-invalid={Boolean(fieldErrors.amount)}
             required
           />
           {#if fieldErrors.amount}
@@ -236,8 +238,9 @@
           <span class="text-sm font-medium text-slate-700">Period</span>
           <select
             name="period"
-            class="h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            class="orbit-select text-sm"
             value={selected?.period || "monthly"}
+            aria-invalid={Boolean(fieldErrors.period)}
           >
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
@@ -255,7 +258,7 @@
             name="startDate"
             type="date"
             value={selected?.startDate?.slice(0, 10) || ""}
-            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            class="orbit-input text-sm"
           />
         </label>
         <label class="grid gap-1.5">
@@ -264,7 +267,7 @@
             name="endDate"
             type="date"
             value={selected?.endDate?.slice(0, 10) || ""}
-            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            class="orbit-input text-sm"
           />
         </label>
       </div>

@@ -82,51 +82,62 @@
   };
 </script>
 
-<div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+<section class="orbit-card overflow-hidden">
   {#if searchable}
     <div class="border-b border-slate-200 p-3">
       <input
         type="search"
-        placeholder="Search..."
+        placeholder="Search records"
         bind:value={query}
-        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+        aria-label="Search table records"
+        class="orbit-input text-sm"
       />
     </div>
   {/if}
-  <table class="min-w-full divide-y divide-slate-200 text-sm">
-    <thead class="bg-slate-50">
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50">
       <tr>
         {#each columns as column}
-          <th class="px-4 py-3 text-left font-semibold text-slate-700">
-            <button type="button" class="inline-flex items-center gap-1" onclick={() => toggleSort(column)}>
+          <th
+            class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700"
+            aria-sort={sortKey === column.key ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+          >
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5"
+              aria-label={`Sort by ${column.label}`}
+              onclick={() => toggleSort(column)}
+            >
               {column.label}
               {#if sortKey === column.key}
-                <span class="text-xs">{sortDirection === "asc" ? "▲" : "▼"}</span>
+                <span class="text-[10px]">{sortDirection === "asc" ? "▲" : "▼"}</span>
               {/if}
             </button>
           </th>
         {/each}
-        <th class="px-4 py-3 text-right font-semibold text-slate-700">Actions</th>
+        <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700">Actions</th>
       </tr>
-    </thead>
-    <tbody class="divide-y divide-slate-100">
-      {#if displayedRows.length === 0}
-        <tr>
-          <td colspan={columns.length + 1} class="px-4 py-8 text-center text-sm text-slate-500">
-            No matching records.
-          </td>
-        </tr>
-      {/if}
-      {#each displayedRows as row}
-        <tr class="hover:bg-slate-50">
-          {#each columns as column}
-            <td class="px-4 py-3 text-slate-700">{formatCell(column, row[column.key])}</td>
-          {/each}
-          <td class="px-4 py-3 text-right">
-            {@render actions?.(row)}
-          </td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
-</div>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {#if displayedRows.length === 0}
+          <tr>
+            <td colspan={columns.length + 1} class="px-4 py-9 text-center text-sm text-slate-500">
+              No matching records.
+            </td>
+          </tr>
+        {/if}
+        {#each displayedRows as row}
+          <tr class="transition hover:bg-slate-50">
+            {#each columns as column}
+              <td class="px-4 py-3.5 text-slate-700">{formatCell(column, row[column.key])}</td>
+            {/each}
+            <td class="px-4 py-3.5 text-right">
+              {@render actions?.(row)}
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
+</section>

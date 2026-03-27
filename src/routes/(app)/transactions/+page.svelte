@@ -142,13 +142,11 @@
   };
 </script>
 
-<main class="space-y-4">
-  <section class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-4">
+<main class="space-y-3">
+  <section class="orbit-frame flex flex-wrap items-center justify-between gap-2 p-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-900">Transactions</h1>
-      <p class="text-sm text-slate-600">
-        Transaction create/update requires valid owned account and category.
-      </p>
+      <p class="text-sm text-slate-600">Record money movement across accounts and categories.</p>
     </div>
     <Button on:click={openCreate}>New transaction</Button>
   </section>
@@ -159,28 +157,28 @@
     <StateMessage title="No transactions yet" message="Create your first transaction entry." />
   {:else}
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Net flow</p>
         <p class={`mt-2 text-2xl font-semibold ${netFlow >= 0 ? "text-emerald-700" : "text-red-700"}`}>
           {netFlow >= 0 ? "+" : ""}{formatCurrency(netFlow)}
         </p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Income total</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(incomeTotal)}</p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Expense total</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(expenseTotal)}</p>
       </article>
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Avg transaction</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(averageAmount)}</p>
       </article>
     </section>
 
     <section class="grid gap-4 xl:grid-cols-2">
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <h2 class="text-lg font-semibold text-slate-900">Expense concentration</h2>
         <p class="mt-1 text-sm text-slate-600">Top spending categories in your current dataset.</p>
         <div class="mt-4 space-y-3">
@@ -198,7 +196,7 @@
         </div>
       </article>
 
-      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <article class="orbit-card p-4">
         <h2 class="text-lg font-semibold text-slate-900">Activity pulse</h2>
         <p class="mt-1 text-sm text-slate-600">Recent movement and largest expense marker.</p>
         <div class="mt-4 space-y-3">
@@ -266,8 +264,9 @@
           <span class="text-sm font-medium text-slate-700">Account</span>
           <select
             name="accountId"
-            class="h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            class="orbit-select text-sm"
             bind:value={formAccountId}
+            aria-invalid={Boolean(fieldErrors.accountId)}
             required
           >
             <option value="" disabled>Select account</option>
@@ -284,9 +283,10 @@
           <span class="text-sm font-medium text-slate-700">Type</span>
           <select
             name="type"
-            class="h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            class="orbit-select text-sm"
             bind:value={formType}
             onchange={onTypeChange}
+            aria-invalid={Boolean(fieldErrors.type)}
           >
             <option value="expense">Expense</option>
             <option value="income">Income</option>
@@ -302,8 +302,9 @@
           <span class="text-sm font-medium text-slate-700">Category</span>
           <select
             name="categoryId"
-            class="h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            class="orbit-select text-sm"
             bind:value={formCategoryId}
+            aria-invalid={Boolean(fieldErrors.categoryId)}
             required
           >
             <option value="" disabled>
@@ -324,8 +325,9 @@
             name="amount"
             type="number"
             step="0.01"
-            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            class="orbit-input text-sm"
             value={selected?.amount || 0}
+            aria-invalid={Boolean(fieldErrors.amount)}
             required
           />
           {#if fieldErrors.amount}
@@ -339,8 +341,9 @@
         <input
           name="occurredAt"
           type="date"
-          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          class="orbit-input text-sm"
           value={(selected?.date || selected?.occurredAt || "").slice(0, 10)}
+          aria-invalid={Boolean(fieldErrors.date || fieldErrors.occurredAt)}
           required
         />
         {#if fieldErrors.date || fieldErrors.occurredAt}
@@ -352,7 +355,7 @@
         <span class="text-sm font-medium text-slate-700">Description</span>
         <input
           name="description"
-          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          class="orbit-input text-sm"
           value={selected?.description || ""}
         />
       </label>

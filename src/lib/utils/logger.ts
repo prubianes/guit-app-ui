@@ -10,9 +10,9 @@ const RELEASE =
 const REDACT_KEYS = new Set([
   "password",
   "token",
-  "accessToken",
+  "accesstoken",
   "access_token",
-  "refreshToken",
+  "refreshtoken",
   "refresh_token",
   "authorization",
   "cookie",
@@ -28,7 +28,7 @@ const redact = (value: unknown): unknown => {
 
   const next: Record<string, unknown> = {};
   for (const [key, rawValue] of Object.entries(value)) {
-    if (REDACT_KEYS.has(key)) {
+    if (REDACT_KEYS.has(key.toLowerCase())) {
       next[key] = "***redacted***";
       continue;
     }

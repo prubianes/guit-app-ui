@@ -8,27 +8,27 @@
   let { data }: { data: PageData } = $props();
 </script>
 
-<main class="space-y-4">
-  <section class="rounded-2xl border border-slate-200 bg-white p-4">
+<main class="space-y-3">
+  <section class="orbit-frame p-4">
     <h1 class="text-2xl font-bold text-slate-900">Profile</h1>
-    <p class="text-sm text-slate-600">Manage your account session and profile data.</p>
+    <p class="text-sm text-slate-600">Account identity and session controls.</p>
   </section>
 
   {#if data.loadError}
     <StateMessage title="Could not load profile" message={data.loadError} tone="error" />
   {:else if data.user}
-    <section class="rounded-2xl border border-slate-200 bg-white p-4">
+    <section class="orbit-card p-5">
       <dl class="grid gap-3 text-sm text-slate-700">
         <div>
-          <dt class="font-medium text-slate-500">Email</dt>
+          <dt class="orbit-label">Email</dt>
           <dd>{data.user.email}</dd>
         </div>
         <div>
-          <dt class="font-medium text-slate-500">Name</dt>
+          <dt class="orbit-label">Name</dt>
           <dd>{data.user.firstName || "-"} {data.user.lastName || ""}</dd>
         </div>
         <div>
-          <dt class="font-medium text-slate-500">Member since</dt>
+          <dt class="orbit-label">Member since</dt>
           <dd>{data.user.createdAt || "-"}</dd>
         </div>
       </dl>
