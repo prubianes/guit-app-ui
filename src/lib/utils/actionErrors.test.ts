@@ -25,4 +25,30 @@ describe("action error mapping", () => {
     expect(mapped.fieldErrors?.categoryId).toContain("expected number");
     expect(mapped.fieldErrors?.date).toContain("ISO datetime");
   });
+
+  it("maps unauthorized errors to a session-expired message", () => {
+    const input = new ApiClientError({
+      code: "UNAUTHORIZED",
+      message: "Invalid token",
+      status: 401
+    });
+
+    const mapped = errorToActionFail(input);
+    expect(mapped.code).toBe("UNAUTHORIZED");
+    expect(mapped.message).toBe("Your session is no longer valid. Please sign in again.");
+    expect(mapped.fieldErrors).toBeUndefined();
+  });
+
+  it("maps rate-limited errors to a retry-later message", () => {
+    const input = new ApiClientError({
+      code: "RATE_LIMITED",
+      message: "Too many requests",
+      status: 429
+    });
+
+    const mapped = errorToActionFail(input);
+    expect(mapped.code).toBe("RATE_LIMITED");
+    expect(mapped.message).toBe("Too many attempts. Please wait a moment and try again.");
+    expect(mapped.fieldErrors).toBeUndefined();
+  });
 });

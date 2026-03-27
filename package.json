@@ -6,16 +6,25 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "start": "node build",
     "preview": "vite preview",
+    "security:validate": "bash ./scripts/validate-prod-security.sh",
+    "security:audit-logs": "bash ./scripts/audit-log-redaction.sh",
+    "security:verify-live": "bash ./scripts/v1-live-verify.sh",
+    "lighthouse:ci": "lhci autorun --config=./lighthouserc.json",
+    "release:check": "pnpm check && pnpm build && pnpm test",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test": "svelte-kit sync && vitest run",
     "test:watch": "svelte-kit sync && vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:matrix": "playwright test"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.54.2",
-    "@sveltejs/adapter-auto": "^6.1.0",
+    "@sveltejs/adapter-node": "^5.5.4",
     "@sveltejs/kit": "^2.20.0",
     "@sveltejs/vite-plugin-svelte": "^5.1.0",
     "@tailwindcss/vite": "^4.0.0",

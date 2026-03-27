@@ -87,6 +87,19 @@ a {
   color: inherit;
 }
 
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 75%, white);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
 .orbit-shell {
   width: min(1380px, calc(100% - 1.5rem));
   margin: 0 auto;

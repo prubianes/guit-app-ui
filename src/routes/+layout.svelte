@@ -12,6 +12,11 @@
   });
 </script>
 
+<svelte:head>
+  <title>Guit Finance</title>
+  <meta name="description" content="Personal finance control board for accounts, categories, budgets, and transactions." />
+</svelte:head>
+
 <LoadingBar visible={Boolean($navigating)} />
 <ToastHost />
 <slot />

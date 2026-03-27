@@ -89,6 +89,7 @@
         type="search"
         placeholder="Search records"
         bind:value={query}
+        aria-label="Search table records"
         class="orbit-input text-sm"
       />
     </div>
@@ -98,8 +99,16 @@
       <thead class="bg-slate-50">
       <tr>
         {#each columns as column}
-          <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700">
-            <button type="button" class="inline-flex items-center gap-1.5" onclick={() => toggleSort(column)}>
+          <th
+            class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700"
+            aria-sort={sortKey === column.key ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+          >
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5"
+              aria-label={`Sort by ${column.label}`}
+              onclick={() => toggleSort(column)}
+            >
               {column.label}
               {#if sortKey === column.key}
                 <span class="text-[10px]">{sortDirection === "asc" ? "▲" : "▼"}</span>

@@ -71,6 +71,7 @@
                 : "border-slate-200 text-slate-700 hover:bg-slate-100"
             }`}
             href={link.href}
+            aria-current={isActive(link.href, $page.url.pathname) ? "page" : undefined}
             style={isActive(link.href, $page.url.pathname) ? "background: var(--text); color: var(--bg);" : ""}
           >
             {link.label}
@@ -104,6 +105,7 @@
             <a
               class={navLinkClass(link.href, $page.url.pathname)}
               href={link.href}
+              aria-current={isActive(link.href, $page.url.pathname) ? "page" : undefined}
               style={isActive(link.href, $page.url.pathname) ? "background: var(--text); color: var(--bg);" : ""}
             >
               <span>{link.label}</span>

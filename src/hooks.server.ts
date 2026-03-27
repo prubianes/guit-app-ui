@@ -1,9 +1,10 @@
-import type { Handle } from "@sveltejs/kit";
+import type { Handle, HandleServerError } from "@sveltejs/kit";
 import { error, redirect } from "@sveltejs/kit";
 import { createApiClient } from "$lib/api/client";
 import { getTokensFromCookies } from "$lib/auth/cookies";
 import { isAuthenticated } from "$lib/auth/session";
 import { log } from "$lib/utils/logger";
+import { captureServerException } from "$lib/utils/monitoring";
 
 export const handle: Handle = async ({ event, resolve }) => {
   event.locals.requestId = crypto.randomUUID();
@@ -51,4 +52,15 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
 
   return resolve(event);
+};
+
+export const handleError: HandleServerError = ({ error: rawError, event, status, message }) => {
+  captureServerException({
+    requestId: event.locals?.requestId,
+    route: event.route.id ?? undefined,
+    pathname: event.url.pathname,
+    status,
+    message,
+    details: rawError instanceof Error ? rawError.message : String(rawError)
+  });
 };
